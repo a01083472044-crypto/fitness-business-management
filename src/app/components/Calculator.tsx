@@ -217,20 +217,22 @@ export default function Calculator() {
             const done = step > num;
             return (
               <div key={num} className="flex items-center gap-2">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                <button
+                  onClick={() => setStep(num)}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all cursor-pointer ${
                     done
                       ? "bg-blue-600 text-white"
                       : active
                       ? "bg-blue-600 text-white ring-4 ring-blue-100"
-                      : "bg-zinc-100 text-zinc-400"
+                      : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
                   }`}
                 >
                   {done ? "✓" : num}
-                </div>
+                </button>
                 <span
-                  className={`text-sm font-medium ${
-                    active ? "text-blue-600" : done ? "text-zinc-600" : "text-zinc-300"
+                  onClick={() => setStep(num)}
+                  className={`text-sm font-medium cursor-pointer ${
+                    active ? "text-blue-600" : done ? "text-zinc-600" : "text-zinc-300 hover:text-zinc-500"
                   }`}
                 >
                   {label}
