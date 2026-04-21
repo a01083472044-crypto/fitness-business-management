@@ -3,6 +3,7 @@ export interface Member {
   name: string;
   phone: string;
   trainer: string;
+  trainerType: "정규직" | "프리랜서" | "";
   totalPayment: number;
   totalSessions: number;
   conductedSessions: number;

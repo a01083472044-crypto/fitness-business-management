@@ -27,6 +27,7 @@ const empty = (): Member => ({
   name: "",
   phone: "",
   trainer: "",
+  trainerType: "",
   totalPayment: 0,
   totalSessions: 0,
   conductedSessions: 0,
@@ -128,7 +129,18 @@ export default function MembersPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="font-bold text-zinc-900">{m.name}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">{m.trainer || "트레이너 미지정"}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="text-xs text-zinc-400">{m.trainer || "트레이너 미지정"}</p>
+                      {m.trainerType && (
+                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                          m.trainerType === "정규직"
+                            ? "bg-blue-50 text-blue-600"
+                            : "bg-emerald-50 text-emerald-600"
+                        }`}>
+                          {m.trainerType}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -199,6 +211,24 @@ export default function MembersPage() {
                 onChange={(e) => setForm({ ...form, trainer: e.target.value })}
                 className={inputCls}
               />
+              <div className="flex gap-2 mt-2">
+                {(["정규직", "프리랜서"] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setForm({ ...form, trainerType: form.trainerType === type ? "" : type })}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition ${
+                      form.trainerType === type
+                        ? type === "정규직"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-emerald-500 text-white border-emerald-500"
+                        : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
             </Field>
             <Field label="총 결제금액">
               <div className="relative">
