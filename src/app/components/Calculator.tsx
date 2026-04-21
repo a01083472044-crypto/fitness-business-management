@@ -75,6 +75,19 @@ function formatHint(input: string): string | null {
   return "→ " + formatKRW(parsed);
 }
 
+function formatManwon(input: string): string | null {
+  const n = parseKorean(input);
+  if (!n) return null;
+  const eok = Math.floor(n / 100000000);
+  const man = Math.floor((n % 100000000) / 10000);
+  const rest = n % 10000;
+  let result = "";
+  if (eok) result += eok + "억 ";
+  if (man) result += man + "만";
+  if (!eok && !man && rest) result += rest;
+  return result.trim() ? "→ " + result.trim() + "원" : null;
+}
+
 function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
   const totalPayment = parseKorean(s1.totalPayment);
   const totalSessions = parseKorean(s1.totalSessions) || 1;
@@ -331,6 +344,9 @@ export default function Calculator() {
                     className="w-full rounded-xl border border-zinc-200 bg-white pl-7 pr-3 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
                   />
                 </div>
+                {formatManwon(s2.equipmentCost) && (
+                  <p className="mt-1 text-xs font-medium text-blue-500">{formatManwon(s2.equipmentCost)}</p>
+                )}
               </div>
               <div>
                 <label className={labelClass}>내용연수</label>
