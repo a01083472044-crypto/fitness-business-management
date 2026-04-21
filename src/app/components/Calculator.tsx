@@ -13,6 +13,7 @@ interface Step1 {
 interface Step2 {
   rent: string;
   trainerSalary: string;
+  freelanceSalary: string;
   equipmentCost: string;
   usefulLife: string;
   otherFixed: string;
@@ -32,6 +33,7 @@ interface Results {
   incomeTaxReserve: number;
   totalTax: number;
   insurance: number;
+  freelanceTax: number;
   depreciation: number;
   totalFixed: number;
   totalVariable: number;
@@ -105,6 +107,8 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
 
   const trainerSalary = parseKorean(s2.trainerSalary);
   const insurance = trainerSalary * 0.09;
+  const freelanceSalary = parseKorean(s2.freelanceSalary);
+  const freelanceTax = freelanceSalary * 0.033;
   const equipmentCost = parseKorean(s2.equipmentCost);
   const usefulLife = parseKorean(s2.usefulLife);
   const depreciation = usefulLife > 0 ? equipmentCost / (usefulLife * 12) : 0;
@@ -112,6 +116,8 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
     parseKorean(s2.rent) +
     trainerSalary +
     insurance +
+    freelanceSalary +
+    freelanceTax +
     depreciation +
     parseKorean(s2.otherFixed);
 
@@ -129,6 +135,7 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
     incomeTaxReserve,
     totalTax,
     insurance,
+    freelanceTax,
     depreciation,
     totalFixed,
     totalVariable,
@@ -199,6 +206,7 @@ export default function Calculator() {
   const [s2, setS2] = useState<Step2>({
     rent: "",
     trainerSalary: "",
+    freelanceSalary: "",
     equipmentCost: "",
     usefulLife: "",
     otherFixed: "",
@@ -222,6 +230,7 @@ export default function Calculator() {
     setS2({
       rent: String(prefill.rent),
       trainerSalary: String(prefill.trainerSalary),
+      freelanceSalary: String(prefill.freelanceSalary),
       equipmentCost: prefill.depreciation > 0 ? String(prefill.depreciation * 12) : "",
       usefulLife: prefill.depreciation > 0 ? "1" : "",
       otherFixed: String(prefill.otherFixed),
@@ -250,7 +259,7 @@ export default function Calculator() {
     setStep(1);
     setResult(null);
     setS1({ totalPayment: "", totalSessions: "", conductedSessions: "" });
-    setS2({ rent: "", trainerSalary: "", equipmentCost: "", usefulLife: "", otherFixed: "" });
+    setS2({ rent: "", trainerSalary: "", freelanceSalary: "", equipmentCost: "", usefulLife: "", otherFixed: "" });
     setS3({ isVat: false, supplies: "", marketing: "", otherVariable: "" });
   };
 
@@ -265,6 +274,7 @@ export default function Calculator() {
     setS2({
       rent: String(n(row[7])),
       trainerSalary: String(n(row[8])),
+      freelanceSalary: "",
       equipmentCost: depreciation > 0 ? String(depreciation * 12) : "",
       usefulLife: depreciation > 0 ? "1" : "",
       otherFixed: String(n(row[10]) + n(row[11]) + n(row[13])),
@@ -495,6 +505,13 @@ export default function Calculator() {
             onChange={(v) => setS2({ ...s2, trainerSalary: v })}
             hint="4대보험(9%)은 자동 계산됩니다"
           />
+          <NumberInput
+            label="프리랜서 인건비 합계"
+            placeholder="₩"
+            value={s2.freelanceSalary}
+            onChange={(v) => setS2({ ...s2, freelanceSalary: v })}
+            hint="원천징수(3.3%)는 자동 계산됩니다"
+          />
           {/* 감가상각 계산기 */}
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
             <div>
@@ -695,6 +712,9 @@ export default function Calculator() {
             <Row label="고정비 합계" value={-result.totalFixed} red />
             <div className="pl-4 space-y-1">
               <SubRow label="4대보험 (9%)" value={-result.insurance} />
+              {result.freelanceTax > 0 && (
+                <SubRow label="원천징수 (3.3%)" value={-result.freelanceTax} />
+              )}
               {result.depreciation > 0 && (
                 <SubRow label="감가상각비" value={-result.depreciation} />
               )}
