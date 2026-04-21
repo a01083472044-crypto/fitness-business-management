@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
+import { getPrefill, clearPrefill } from "../lib/store";
 
 interface Step1 {
   totalPayment: string;
@@ -209,6 +210,31 @@ export default function Calculator() {
     otherVariable: "",
   });
   const [result, setResult] = useState<Results | null>(null);
+  useEffect(() => {
+    const prefill = getPrefill();
+    if (!prefill) return;
+    clearPrefill();
+    setS1({
+      totalPayment: String(prefill.totalPayment),
+      totalSessions: String(prefill.totalSessions),
+      conductedSessions: String(prefill.conductedSessions),
+    });
+    setS2({
+      rent: String(prefill.rent),
+      trainerSalary: String(prefill.trainerSalary),
+      equipmentCost: prefill.depreciation > 0 ? String(prefill.depreciation * 12) : "",
+      usefulLife: prefill.depreciation > 0 ? "1" : "",
+      otherFixed: String(prefill.otherFixed),
+    });
+    setS3({
+      isVat: prefill.isVat,
+      supplies: String(prefill.supplies),
+      marketing: String(prefill.marketing),
+      otherVariable: String(prefill.otherVariable),
+    });
+    setImportMsg("대시보드에서 데이터를 불러왔습니다.");
+  }, []);
+
   const [importedMonths, setImportedMonths] = useState<ImportedMonth[]>([]);
   const [memberSessions, setMemberSessions] = useState({ total: 0, conducted: 0 });
   const [showMonthPicker, setShowMonthPicker] = useState(false);
