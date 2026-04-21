@@ -11,6 +11,7 @@ export interface MonthlyCosts {
   month: string; // YYYY-MM
   rent: number;
   trainerSalary: number;
+  freelanceSalary: number;
   utilities: number;
   communication: number;
   depreciation: number;
@@ -27,6 +28,7 @@ export interface CalcPrefill {
   conductedSessions: number;
   rent: number;
   trainerSalary: number;
+  freelanceSalary: number;
   depreciation: number;
   otherFixed: number;
   supplies: number;
@@ -94,6 +96,7 @@ export function emptyCosts(month: string): MonthlyCosts {
     month,
     rent: 0,
     trainerSalary: 0,
+    freelanceSalary: 0,
     utilities: 0,
     communication: 0,
     depreciation: 0,

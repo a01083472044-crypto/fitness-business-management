@@ -46,7 +46,8 @@ export default function DashboardPage() {
   const vat = costs.isVat ? actualRevenue * 0.1 : 0;
   const incomeTax = actualRevenue * 0.033;
   const insurance = costs.trainerSalary * 0.09;
-  const totalFixed = costs.rent + costs.trainerSalary + insurance + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
+  const freelanceTax = costs.freelanceSalary * 0.033;
+  const totalFixed = costs.rent + costs.trainerSalary + insurance + costs.freelanceSalary + freelanceTax + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
   const totalVariable = costs.supplies + costs.marketing + costs.otherVariable;
   const netProfit = actualRevenue - vat - incomeTax - totalFixed - totalVariable;
 
@@ -57,6 +58,7 @@ export default function DashboardPage() {
       conductedSessions: memberStats.conductedSessions,
       rent: costs.rent,
       trainerSalary: costs.trainerSalary,
+      freelanceSalary: costs.freelanceSalary,
       depreciation: costs.depreciation,
       otherFixed: costs.utilities + costs.communication + costs.otherFixed,
       supplies: costs.supplies,
