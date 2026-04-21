@@ -489,7 +489,7 @@ export default function Calculator() {
             onChange={(v) => setS2({ ...s2, rent: v })}
           />
           <NumberInput
-            label="트레이너 인건비 합계"
+            label="정규직 인건비 합계"
             placeholder="₩"
             value={s2.trainerSalary}
             onChange={(v) => setS2({ ...s2, trainerSalary: v })}
