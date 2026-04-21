@@ -40,10 +40,45 @@ interface Results {
 const formatKRW = (n: number) =>
   (n < 0 ? "-" : "") + "₩" + Math.abs(Math.round(n)).toLocaleString("ko-KR");
 
+function parseKorean(input: string): number {
+  if (!input) return 0;
+  const cleaned = input.replace(/[원,\s]/g, "").trim();
+  if (!cleaned) return 0;
+  if (/^\d+$/.test(cleaned)) return Number(cleaned);
+
+  let total = 0;
+  let remaining = cleaned;
+
+  const match = (pattern: RegExp, unit: number) => {
+    const m = remaining.match(pattern);
+    if (m) {
+      total += parseFloat(m[1]) * unit;
+      remaining = remaining.slice(m[0].length);
+    }
+  };
+
+  match(/^(\d+(?:\.\d+)?)억/, 100000000);
+  match(/^(\d+(?:\.\d+)?)천만/, 10000000);
+  match(/^(\d+(?:\.\d+)?)만/, 10000);
+  match(/^(\d+(?:\.\d+)?)천/, 1000);
+  match(/^(\d+(?:\.\d+)?)백/, 100);
+  if (/^\d+$/.test(remaining)) total += Number(remaining);
+
+  return total || 0;
+}
+
+function formatHint(input: string): string | null {
+  if (!input) return null;
+  if (/^\d+$/.test(input.replace(/,/g, ""))) return null;
+  const parsed = parseKorean(input);
+  if (!parsed) return null;
+  return "→ " + formatKRW(parsed);
+}
+
 function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
-  const totalPayment = Number(s1.totalPayment) || 0;
-  const totalSessions = Number(s1.totalSessions) || 1;
-  const conductedSessions = Number(s1.conductedSessions) || 0;
+  const totalPayment = parseKorean(s1.totalPayment);
+  const totalSessions = parseKorean(s1.totalSessions) || 1;
+  const conductedSessions = parseKorean(s1.conductedSessions);
 
   const ratio = conductedSessions / totalSessions;
   const actualRevenue = totalPayment * ratio;
@@ -53,22 +88,22 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
   const incomeTaxReserve = actualRevenue * 0.033;
   const totalTax = vat + incomeTaxReserve;
 
-  const trainerSalary = Number(s2.trainerSalary) || 0;
+  const trainerSalary = parseKorean(s2.trainerSalary);
   const insurance = trainerSalary * 0.09;
-  const equipmentCost = Number(s2.equipmentCost) || 0;
-  const usefulLife = Number(s2.usefulLife) || 0;
+  const equipmentCost = parseKorean(s2.equipmentCost);
+  const usefulLife = parseKorean(s2.usefulLife);
   const depreciation = usefulLife > 0 ? equipmentCost / (usefulLife * 12) : 0;
   const totalFixed =
-    (Number(s2.rent) || 0) +
+    parseKorean(s2.rent) +
     trainerSalary +
     insurance +
     depreciation +
-    (Number(s2.otherFixed) || 0);
+    parseKorean(s2.otherFixed);
 
   const totalVariable =
-    (Number(s3.supplies) || 0) +
-    (Number(s3.marketing) || 0) +
-    (Number(s3.otherVariable) || 0);
+    parseKorean(s3.supplies) +
+    parseKorean(s3.marketing) +
+    parseKorean(s3.otherVariable);
 
   const netProfit = actualRevenue - totalTax - totalFixed - totalVariable;
 
@@ -105,29 +140,30 @@ function NumberInput({
   onChange: (v: string) => void;
   hint?: string;
 }) {
+  const isCount = placeholder.includes("회");
+  const parsed = formatHint(value);
   return (
     <div>
       <label className={labelClass}>{label}</label>
       <div className="relative">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">
-          {placeholder.includes("회") ? "" : "₩"}
-        </span>
+        {!isCount && (
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
+        )}
         <input
-          type="number"
-          placeholder="0"
+          type="text"
+          inputMode={isCount ? "numeric" : "text"}
+          placeholder={isCount ? "0" : "0 또는 300만"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={
-            inputClass +
-            (placeholder.includes("회") ? " pl-4" : " pl-8")
-          }
+          className={inputClass + (isCount ? " pl-4" : " pl-8")}
         />
-        {placeholder.includes("회") && (
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">
-            회
-          </span>
+        {isCount && (
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">회</span>
         )}
       </div>
+      {parsed && (
+        <p className="mt-1 text-xs font-medium text-blue-500">{parsed}</p>
+      )}
       {hint && <p className="mt-1 text-xs text-zinc-400">{hint}</p>}
     </div>
   );
@@ -308,11 +344,11 @@ export default function Calculator() {
                 </div>
               </div>
             </div>
-            {s2.equipmentCost && s2.usefulLife && Number(s2.usefulLife) > 0 && (
+            {s2.equipmentCost && s2.usefulLife && parseKorean(s2.usefulLife) > 0 && (
               <div className="rounded-lg bg-blue-600 px-4 py-2.5 flex justify-between items-center">
                 <span className="text-sm text-blue-100">월 감가상각비</span>
                 <span className="font-bold text-white">
-                  {formatKRW(Number(s2.equipmentCost) / (Number(s2.usefulLife) * 12))}
+                  {formatKRW(parseKorean(s2.equipmentCost) / (parseKorean(s2.usefulLife) * 12))}
                 </span>
               </div>
             )}
