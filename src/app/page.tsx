@@ -7,7 +7,7 @@ export default function Home() {
       <div className="bg-white border-b border-zinc-100">
         <div className="max-w-lg mx-auto px-6 py-12 text-center">
           <span className="inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-500 mb-4">
-            For Fitness Business Owners
+            피트니스 사업자 전용
           </span>
           <h1 className="text-3xl font-black text-zinc-900 leading-tight">
             당신의 실제 순이익,<br />
