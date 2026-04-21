@@ -165,7 +165,7 @@ function NumberInput({
         <input
           type="text"
           inputMode={isCount ? "numeric" : "text"}
-          placeholder={isCount ? "0" : "0 또는 300만"}
+          placeholder={isCount ? "0" : "0 또는 만원"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={inputClass + (isCount ? " pl-4" : " pl-8")}
