@@ -345,8 +345,8 @@ export default function Calculator() {
                     className="w-full rounded-xl border border-zinc-200 bg-white pl-7 pr-3 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
                   />
                 </div>
-                {formatManwon(s2.equipmentCost) && (
-                  <p className="mt-1 text-xs font-medium text-blue-500">{formatManwon(s2.equipmentCost)}</p>
+                {parseKorean(s2.equipmentCost) > 0 && (
+                  <p className="mt-1 text-xs font-medium text-blue-500">→ {parseKorean(s2.equipmentCost).toLocaleString("ko-KR")}원</p>
                 )}
               </div>
               <div>
