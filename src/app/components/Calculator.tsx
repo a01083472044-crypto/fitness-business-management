@@ -339,7 +339,7 @@ export default function Calculator() {
                   <input
                     type="text"
                     inputMode="text"
-                    placeholder="0 또는 6000만"
+                    placeholder="0 또는 만원"
                     value={s2.equipmentCost}
                     onChange={(e) => setS2({ ...s2, equipmentCost: e.target.value })}
                     className="w-full rounded-xl border border-zinc-200 bg-white pl-7 pr-3 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
