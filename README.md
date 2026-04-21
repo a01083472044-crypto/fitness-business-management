@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 피트니스 사업자 순이익 계산기
 
-## Getting Started
+PT 센터 원장님들이 실제 순이익을 쉽게 계산할 수 있는 웹 앱.
+총 결제금액과 실제 순이익의 차이를 명확히 보여줍니다.
 
-First, run the development server:
+## 기술 스택
+
+- **Next.js** (App Router)
+- **Tailwind CSS**
+- **TypeScript**
+- **Vercel** 배포
+
+## 주요 기능
+
+- 3단계 폼: 매출 정보 → 고정비 → 세금·변동비
+- 한국어 숫자 입력 지원 (만, 억 단위)
+- 감가상각비 자동 계산기
+- 부가세 / 종합소득세 자동 계산
+- 실소진매출 vs 총 결제금액 비교 결과 화면
+- 스텝 인디케이터 클릭으로 자유 이동
+
+## 파일 구조
+
+```
+src/
+  app/
+    page.tsx              # 홈 페이지 (헤더 + Calculator 렌더)
+    components/
+      Calculator.tsx      # 메인 계산기 컴포넌트 (전체 로직 포함)
+    layout.tsx
+    globals.css
+```
+
+## 개발 실행
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[http://localhost:3000](http://localhost:3000) 에서 확인
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 작업 히스토리
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 커밋 | 내용 |
+|------|------|
+| `892b544` | 버튼/포인트 색상 파란색 → 주황색 |
+| `4e63a95` | VAT 토글 knob 위치 수정 |
+| `bda6635` | VAT 토글 knob 사라지는 버그 수정 |
+| `3b93ac3` | 스텝 인디케이터 클릭으로 자유 이동 |
+| `9ee85df` | VAT 토글 버튼 overflow 수정 |
+| `c15d80d` | 한국어 숫자 입력 지원 (만, 억 + 실시간 미리보기) |
+| `688cf3a` | 감가상각비 계산기 추가 |
+| `c1effc2` | 피트니스 순이익 계산기 최초 구현 |
+| `b3b5205` | 홈 페이지 타이틀 추가 |
+| `d9fbb1d` | Next.js 초기 세팅 |
 
-## Learn More
+## 앞으로 할 수 있는 것들 (미구현)
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 결과 공유 / 저장 기능
+- 월별 추이 그래프
+- PDF 내보내기
+- 모바일 UX 개선
