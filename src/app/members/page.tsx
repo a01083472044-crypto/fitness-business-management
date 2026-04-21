@@ -205,8 +205,8 @@ export default function MembersPage() {
                   className={inputCls + " pl-8"}
                 />
               </div>
-              {formatManwon(form.totalPayment) && (
-                <p className="mt-1 text-xs font-medium text-blue-500">→ {formatManwon(form.totalPayment)}</p>
+              {form.totalPayment > 0 && (
+                <p className="mt-1 text-xs font-medium text-blue-500">→ {form.totalPayment.toLocaleString("ko-KR")}원</p>
               )}
             </Field>
             <div className="grid grid-cols-2 gap-3">
