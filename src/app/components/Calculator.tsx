@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 
 interface Step1 {
   totalPayment: string;
@@ -182,6 +183,11 @@ function NumberInput({
   );
 }
 
+interface ImportedMonth {
+  label: string;
+  row: unknown[];
+}
+
 export default function Calculator() {
   const [step, setStep] = useState(1);
   const [s1, setS1] = useState<Step1>({
@@ -203,6 +209,11 @@ export default function Calculator() {
     otherVariable: "",
   });
   const [result, setResult] = useState<Results | null>(null);
+  const [importedMonths, setImportedMonths] = useState<ImportedMonth[]>([]);
+  const [memberSessions, setMemberSessions] = useState({ total: 0, conducted: 0 });
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const handleCalculate = () => {
     setResult(calculate(s1, s2, s3));
@@ -217,10 +228,142 @@ export default function Calculator() {
     setS3({ isVat: false, supplies: "", marketing: "", otherVariable: "" });
   };
 
+  const applyMonth = (row: unknown[], sessions: { total: number; conducted: number }, isVat: boolean) => {
+    const n = (v: unknown) => (typeof v === "number" ? v : 0);
+    setS1({
+      totalPayment: String(n(row[1])),
+      totalSessions: String(sessions.total || 0),
+      conductedSessions: String(sessions.conducted || 0),
+    });
+    setS2({
+      rent: String(n(row[7])),
+      trainerSalary: String(n(row[8])),
+      equipmentCost: "",
+      usefulLife: "",
+      otherFixed: String(n(row[10]) + n(row[11]) + n(row[12]) + n(row[13])),
+    });
+    setS3({
+      isVat,
+      supplies: String(n(row[15])),
+      marketing: String(n(row[16])),
+      otherVariable: String(n(row[17]) + n(row[18]) + n(row[19]) + n(row[20])),
+    });
+    setShowMonthPicker(false);
+    setStep(1);
+  };
+
+  const handleExcelFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target?.result, { type: "array" });
+
+        // 순이익정산 시트 파싱
+        const profitWs = wb.Sheets["순이익정산"];
+        if (!profitWs) {
+          setImportMsg("'순이익정산' 시트를 찾을 수 없습니다.");
+          return;
+        }
+        const profitData = XLSX.utils.sheet_to_json<unknown[]>(profitWs, { header: 1, defval: 0 });
+        const vatSetting = (profitData[2] as unknown[])?.[6];
+        const isVat = vatSetting === "과세";
+        const dataRows = (profitData.slice(7) as unknown[][]).filter(
+          (row) => row[0] && typeof row[1] === "number" && row[1] > 0
+        );
+
+        if (dataRows.length === 0) {
+          setImportMsg("정산 데이터가 없습니다. 엑셀에 데이터를 먼저 입력해주세요.");
+          return;
+        }
+
+        // 회원데이터 시트 파싱 (총구매회차, 소진회차 합산)
+        const memberWs = wb.Sheets["회원데이터"];
+        let totalSessions = 0, conductedSessions = 0;
+        if (memberWs) {
+          const memberData = XLSX.utils.sheet_to_json<unknown[]>(memberWs, { header: 1, defval: 0 });
+          memberData.slice(1).forEach((row) => {
+            totalSessions += typeof row[6] === "number" ? row[6] : 0;
+            conductedSessions += typeof row[7] === "number" ? row[7] : 0;
+          });
+        }
+
+        const sessions = { total: totalSessions, conducted: conductedSessions };
+        setMemberSessions(sessions);
+
+        if (dataRows.length === 1) {
+          applyMonth(dataRows[0], sessions, isVat);
+          setImportMsg(`${dataRows[0][0]} 데이터를 불러왔습니다.`);
+        } else {
+          setImportedMonths(dataRows.map((row) => ({ label: String(row[0]), row })));
+          setShowMonthPicker(true);
+        }
+      } catch {
+        setImportMsg("파일을 읽는 중 오류가 발생했습니다.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const steps = ["매출 정보", "고정비", "세금·변동비", "결과"];
 
   return (
     <div className="w-full max-w-lg mx-auto">
+      {/* Excel import */}
+      {step < 4 && (
+        <div className="mb-6">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleExcelFile(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="w-full rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 py-3 text-sm font-semibold text-blue-600 hover:bg-blue-100 transition flex items-center justify-center gap-2"
+          >
+            📂 피트니스 정산 시트 엑셀에서 불러오기
+          </button>
+          {importMsg && (
+            <p className="mt-2 text-xs text-center text-blue-500">{importMsg}</p>
+          )}
+        </div>
+      )}
+
+      {/* Month picker modal */}
+      {showMonthPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-80 mx-4">
+            <p className="font-bold text-zinc-900 mb-1">월 선택</p>
+            <p className="text-xs text-zinc-400 mb-4">불러올 월을 선택하세요</p>
+            <div className="space-y-2">
+              {importedMonths.map((m) => (
+                <button
+                  key={m.label}
+                  onClick={() => {
+                    applyMonth(m.row, memberSessions, s3.isVat);
+                    setImportMsg(`${m.label} 데이터를 불러왔습니다.`);
+                  }}
+                  className="w-full rounded-xl border border-zinc-200 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-blue-50 hover:border-blue-300 transition"
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowMonthPicker(false)}
+              className="mt-3 w-full rounded-xl py-2 text-xs text-zinc-400 hover:text-zinc-600"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Step indicator */}
       {step < 4 && (
         <div className="flex items-center justify-between mb-8">
