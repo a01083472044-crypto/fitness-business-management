@@ -3,6 +3,25 @@
 import { useState, useEffect } from "react";
 import { getMembers, saveMembers, Member, formatManwon } from "../lib/store";
 
+function parseKorean(input: string): number {
+  if (!input) return 0;
+  const cleaned = input.replace(/[원,\s]/g, "").trim();
+  if (!cleaned) return 0;
+  if (/^\d+$/.test(cleaned)) return Number(cleaned);
+  let total = 0;
+  let remaining = cleaned;
+  const match = (pattern: RegExp, unit: number) => {
+    const m = remaining.match(pattern);
+    if (m) { total += parseFloat(m[1]) * unit; remaining = remaining.slice(m[0].length); }
+  };
+  match(/^(\d+(?:\.\d+)?)억/, 100000000);
+  match(/^(\d+(?:\.\d+)?)천만/, 10000000);
+  match(/^(\d+(?:\.\d+)?)만/, 10000);
+  match(/^(\d+(?:\.\d+)?)천/, 1000);
+  if (/^\d+$/.test(remaining)) total += Number(remaining);
+  return total || 0;
+}
+
 const empty = (): Member => ({
   id: crypto.randomUUID(),
   name: "",
@@ -19,6 +38,7 @@ function formatKRW(n: number) {
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [form, setForm] = useState<Member>(empty());
+  const [paymentInput, setPaymentInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -33,12 +53,14 @@ export default function MembersPage() {
 
   const openAdd = () => {
     setForm(empty());
+    setPaymentInput("");
     setEditingId(null);
     setShowForm(true);
   };
 
   const openEdit = (m: Member) => {
     setForm({ ...m });
+    setPaymentInput(String(m.totalPayment || ""));
     setEditingId(m.id);
     setShowForm(true);
   };
@@ -168,14 +190,18 @@ export default function MembersPage() {
                 className={inputCls}
               />
             </Field>
-            <Field label="총 결제금액 (원)">
+            <Field label="총 결제금액">
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
                 <input
-                  type="number"
-                  placeholder="0"
-                  value={form.totalPayment || ""}
-                  onChange={(e) => setForm({ ...form, totalPayment: Number(e.target.value) })}
+                  type="text"
+                  inputMode="text"
+                  placeholder="0 또는 만원"
+                  value={paymentInput}
+                  onChange={(e) => {
+                    setPaymentInput(e.target.value);
+                    setForm({ ...form, totalPayment: parseKorean(e.target.value) });
+                  }}
                   className={inputCls + " pl-8"}
                 />
               </div>
