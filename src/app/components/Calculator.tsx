@@ -235,12 +235,13 @@ export default function Calculator() {
       totalSessions: String(sessions.total || 0),
       conductedSessions: String(sessions.conducted || 0),
     });
+    const depreciation = n(row[12]);
     setS2({
       rent: String(n(row[7])),
       trainerSalary: String(n(row[8])),
-      equipmentCost: "",
-      usefulLife: "",
-      otherFixed: String(n(row[10]) + n(row[11]) + n(row[12]) + n(row[13])),
+      equipmentCost: depreciation > 0 ? String(depreciation * 12) : "",
+      usefulLife: depreciation > 0 ? "1" : "",
+      otherFixed: String(n(row[10]) + n(row[11]) + n(row[13])),
     });
     setS3({
       isVat,
