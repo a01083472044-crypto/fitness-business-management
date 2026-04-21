@@ -11,6 +11,8 @@ interface Step1 {
 interface Step2 {
   rent: string;
   trainerSalary: string;
+  equipmentCost: string;
+  usefulLife: string;
   otherFixed: string;
 }
 
@@ -28,6 +30,7 @@ interface Results {
   incomeTaxReserve: number;
   totalTax: number;
   insurance: number;
+  depreciation: number;
   totalFixed: number;
   totalVariable: number;
   netProfit: number;
@@ -52,10 +55,14 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
 
   const trainerSalary = Number(s2.trainerSalary) || 0;
   const insurance = trainerSalary * 0.09;
+  const equipmentCost = Number(s2.equipmentCost) || 0;
+  const usefulLife = Number(s2.usefulLife) || 0;
+  const depreciation = usefulLife > 0 ? equipmentCost / (usefulLife * 12) : 0;
   const totalFixed =
     (Number(s2.rent) || 0) +
     trainerSalary +
     insurance +
+    depreciation +
     (Number(s2.otherFixed) || 0);
 
   const totalVariable =
@@ -72,6 +79,7 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
     incomeTaxReserve,
     totalTax,
     insurance,
+    depreciation,
     totalFixed,
     totalVariable,
     netProfit,
@@ -135,6 +143,8 @@ export default function Calculator() {
   const [s2, setS2] = useState<Step2>({
     rent: "",
     trainerSalary: "",
+    equipmentCost: "",
+    usefulLife: "",
     otherFixed: "",
   });
   const [s3, setS3] = useState<Step3>({
@@ -154,7 +164,7 @@ export default function Calculator() {
     setStep(1);
     setResult(null);
     setS1({ totalPayment: "", totalSessions: "", conductedSessions: "" });
-    setS2({ rent: "", trainerSalary: "", otherFixed: "" });
+    setS2({ rent: "", trainerSalary: "", equipmentCost: "", usefulLife: "", otherFixed: "" });
     setS3({ isVat: false, supplies: "", marketing: "", otherVariable: "" });
   };
 
@@ -264,12 +274,56 @@ export default function Calculator() {
             onChange={(v) => setS2({ ...s2, trainerSalary: v })}
             hint="4대보험(9%)은 자동 계산됩니다"
           />
+          {/* 감가상각 계산기 */}
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
+            <div>
+              <p className="font-medium text-zinc-900 text-sm">감가상각비 계산기</p>
+              <p className="text-xs text-zinc-400 mt-0.5">장비 구입금액과 내용연수를 입력하면 월 감가상각비를 자동 계산합니다</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>장비 구입금액</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={s2.equipmentCost}
+                    onChange={(e) => setS2({ ...s2, equipmentCost: e.target.value })}
+                    className="w-full rounded-xl border border-zinc-200 bg-white pl-7 pr-3 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>내용연수</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="5"
+                    value={s2.usefulLife}
+                    onChange={(e) => setS2({ ...s2, usefulLife: e.target.value })}
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-3 pr-10 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">년</span>
+                </div>
+              </div>
+            </div>
+            {s2.equipmentCost && s2.usefulLife && Number(s2.usefulLife) > 0 && (
+              <div className="rounded-lg bg-blue-600 px-4 py-2.5 flex justify-between items-center">
+                <span className="text-sm text-blue-100">월 감가상각비</span>
+                <span className="font-bold text-white">
+                  {formatKRW(Number(s2.equipmentCost) / (Number(s2.usefulLife) * 12))}
+                </span>
+              </div>
+            )}
+          </div>
+
           <NumberInput
             label="기타 고정비"
             placeholder="₩"
             value={s2.otherFixed}
             onChange={(v) => setS2({ ...s2, otherFixed: v })}
-            hint="공과금, 통신비, 감가상각 등"
+            hint="공과금, 통신비 등"
           />
           <div className="flex gap-3">
             <button
@@ -416,6 +470,9 @@ export default function Calculator() {
             <Row label="고정비 합계" value={-result.totalFixed} red />
             <div className="pl-4 space-y-1">
               <SubRow label="4대보험 (9%)" value={-result.insurance} />
+              {result.depreciation > 0 && (
+                <SubRow label="감가상각비" value={-result.depreciation} />
+              )}
             </div>
 
             <div className="h-px bg-zinc-100" />
