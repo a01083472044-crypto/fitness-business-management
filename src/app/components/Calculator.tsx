@@ -316,11 +316,11 @@ export default function Calculator() {
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
             <div>
               <p className="font-medium text-zinc-900 text-sm">감가상각비 계산기</p>
-              <p className="text-xs text-zinc-400 mt-0.5">장비 구입금액과 내용연수를 입력하면 월 감가상각비를 자동 계산합니다</p>
+              <p className="text-xs text-zinc-400 mt-0.5">인테리어 장비 구입금액과 내용연수를 입력하면 월 감가상각비를 자동 계산합니다</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelClass}>장비 구입금액</label>
+                <label className={labelClass}>인테리어 장비 구입금액</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
                   <input
