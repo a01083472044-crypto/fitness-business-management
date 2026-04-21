@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts } from "../lib/store";
+import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts, formatManwon } from "../lib/store";
 
 function formatKRW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
@@ -24,8 +24,8 @@ function NumField({ label, value, onChange, hint }: { label: string; value: numb
           className={inputCls + " pl-8"}
         />
       </div>
-      {value > 0 && (
-        <p className="mt-1 text-xs font-medium text-blue-500">→ {value.toLocaleString("ko-KR")}원</p>
+      {formatManwon(value) && (
+        <p className="mt-1 text-xs font-medium text-blue-500">→ {formatManwon(value)}</p>
       )}
       {hint && <p className="mt-1 text-xs text-zinc-400">{hint}</p>}
     </div>

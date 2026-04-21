@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getMembers, saveMembers, Member } from "../lib/store";
+import { getMembers, saveMembers, Member, formatManwon } from "../lib/store";
 
 const empty = (): Member => ({
   id: crypto.randomUUID(),
@@ -169,13 +169,19 @@ export default function MembersPage() {
               />
             </Field>
             <Field label="총 결제금액 (원)">
-              <input
-                type="number"
-                placeholder="0"
-                value={form.totalPayment || ""}
-                onChange={(e) => setForm({ ...form, totalPayment: Number(e.target.value) })}
-                className={inputCls}
-              />
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={form.totalPayment || ""}
+                  onChange={(e) => setForm({ ...form, totalPayment: Number(e.target.value) })}
+                  className={inputCls + " pl-8"}
+                />
+              </div>
+              {formatManwon(form.totalPayment) && (
+                <p className="mt-1 text-xs font-medium text-blue-500">→ {formatManwon(form.totalPayment)}</p>
+              )}
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="총 판매 회차">

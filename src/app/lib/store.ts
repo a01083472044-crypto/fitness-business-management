@@ -104,3 +104,15 @@ export function emptyCosts(month: string): MonthlyCosts {
     isVat: false,
   };
 }
+
+export function formatManwon(n: number): string | null {
+  if (!n) return null;
+  const eok = Math.floor(n / 100000000);
+  const man = Math.floor((n % 100000000) / 10000);
+  const rest = n % 10000;
+  let result = "";
+  if (eok) result += eok + "억 ";
+  if (man) result += man + "만";
+  if (!eok && !man && rest) result += rest;
+  return result.trim() ? result.trim() + "원" : null;
+}
