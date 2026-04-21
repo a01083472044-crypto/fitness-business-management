@@ -25,6 +25,7 @@ function parseKorean(input: string): number {
 const empty = (): Member => ({
   id: crypto.randomUUID(),
   name: "",
+  phone: "",
   trainer: "",
   totalPayment: 0,
   totalSessions: 0,
@@ -178,6 +179,15 @@ export default function MembersPage() {
                 placeholder="홍길동"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="연락처">
+              <input
+                type="tel"
+                placeholder="010-0000-0000"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 className={inputCls}
               />
             </Field>
