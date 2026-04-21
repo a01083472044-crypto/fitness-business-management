@@ -399,7 +399,7 @@ export default function Calculator() {
               </div>
               <button
                 onClick={() => setS3({ ...s3, isVat: !s3.isVat })}
-                className={`flex-shrink-0 w-11 h-6 rounded-full transition-colors relative overflow-hidden ${
+                className={`flex-shrink-0 w-11 h-6 rounded-full transition-colors relative ${
                   s3.isVat ? "bg-blue-600" : "bg-zinc-200"
                 }`}
               >
