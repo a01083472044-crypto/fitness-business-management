@@ -123,7 +123,7 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition";
+  "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 transition";
 
 const labelClass = "block text-sm font-medium text-zinc-600 mb-1.5";
 
@@ -162,7 +162,7 @@ function NumberInput({
         )}
       </div>
       {parsed && (
-        <p className="mt-1 text-xs font-medium text-blue-500">{parsed}</p>
+        <p className="mt-1 text-xs font-medium text-orange-500">{parsed}</p>
       )}
       {hint && <p className="mt-1 text-xs text-zinc-400">{hint}</p>}
     </div>
@@ -221,9 +221,9 @@ export default function Calculator() {
                   onClick={() => setStep(num)}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all cursor-pointer ${
                     done
-                      ? "bg-blue-600 text-white"
+                      ? "bg-orange-500 text-white"
                       : active
-                      ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                      ? "bg-orange-500 text-white ring-4 ring-orange-100"
                       : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
                   }`}
                 >
@@ -232,7 +232,7 @@ export default function Calculator() {
                 <span
                   onClick={() => setStep(num)}
                   className={`text-sm font-medium cursor-pointer ${
-                    active ? "text-blue-600" : done ? "text-zinc-600" : "text-zinc-300 hover:text-zinc-500"
+                    active ? "text-orange-500" : done ? "text-zinc-600" : "text-zinc-300 hover:text-zinc-500"
                   }`}
                 >
                   {label}
@@ -240,7 +240,7 @@ export default function Calculator() {
                 {i < 2 && (
                   <div
                     className={`h-px w-8 mx-1 ${
-                      done ? "bg-blue-300" : "bg-zinc-200"
+                      done ? "bg-orange-300" : "bg-zinc-200"
                     }`}
                   />
                 )}
@@ -283,7 +283,7 @@ export default function Calculator() {
           <button
             onClick={() => setStep(2)}
             disabled={!s1.totalPayment || !s1.totalSessions || !s1.conductedSessions}
-            className="w-full rounded-xl bg-blue-600 py-3.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            className="w-full rounded-xl bg-orange-500 py-3.5 font-semibold text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
             다음 →
           </button>
@@ -328,7 +328,7 @@ export default function Calculator() {
                     placeholder="0"
                     value={s2.equipmentCost}
                     onChange={(e) => setS2({ ...s2, equipmentCost: e.target.value })}
-                    className="w-full rounded-xl border border-zinc-200 bg-white pl-7 pr-3 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
+                    className="w-full rounded-xl border border-zinc-200 bg-white pl-7 pr-3 py-3 text-zinc-900 placeholder-zinc-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 transition text-sm"
                   />
                 </div>
               </div>
@@ -340,15 +340,15 @@ export default function Calculator() {
                     placeholder="5"
                     value={s2.usefulLife}
                     onChange={(e) => setS2({ ...s2, usefulLife: e.target.value })}
-                    className="w-full rounded-xl border border-zinc-200 bg-white px-3 pr-10 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm"
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-3 pr-10 py-3 text-zinc-900 placeholder-zinc-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 transition text-sm"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">년</span>
                 </div>
               </div>
             </div>
             {s2.equipmentCost && s2.usefulLife && parseKorean(s2.usefulLife) > 0 && (
-              <div className="rounded-lg bg-blue-600 px-4 py-2.5 flex justify-between items-center">
-                <span className="text-sm text-blue-100">월 감가상각비</span>
+              <div className="rounded-lg bg-orange-500 px-4 py-2.5 flex justify-between items-center">
+                <span className="text-sm text-orange-100">월 감가상각비</span>
                 <span className="font-bold text-white">
                   {formatKRW(parseKorean(s2.equipmentCost) / (parseKorean(s2.usefulLife) * 12))}
                 </span>
@@ -373,7 +373,7 @@ export default function Calculator() {
             <button
               onClick={() => setStep(3)}
               disabled={!s2.rent && !s2.trainerSalary}
-              className="flex-[2] rounded-xl bg-blue-600 py-3.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="flex-[2] rounded-xl bg-orange-500 py-3.5 font-semibold text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               다음 →
             </button>
@@ -400,7 +400,7 @@ export default function Calculator() {
               <button
                 onClick={() => setS3({ ...s3, isVat: !s3.isVat })}
                 className={`flex-shrink-0 w-11 h-6 rounded-full transition-colors relative overflow-hidden ${
-                  s3.isVat ? "bg-blue-600" : "bg-zinc-200"
+                  s3.isVat ? "bg-orange-500" : "bg-zinc-200"
                 }`}
               >
                 <span
@@ -412,7 +412,7 @@ export default function Calculator() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          <div className="rounded-xl bg-orange-50 px-4 py-3 text-sm text-orange-700">
             종합소득세 적립금(3.3%)은 자동 계산됩니다
           </div>
 
@@ -443,7 +443,7 @@ export default function Calculator() {
             </button>
             <button
               onClick={handleCalculate}
-              className="flex-[2] rounded-xl bg-blue-600 py-3.5 font-semibold text-white hover:bg-blue-700 transition"
+              className="flex-[2] rounded-xl bg-orange-500 py-3.5 font-semibold text-white hover:bg-orange-600 transition"
             >
               순이익 계산하기
             </button>
