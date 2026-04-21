@@ -1,31 +1,59 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts, formatManwon } from "../lib/store";
+import { useState, useEffect, ChangeEvent } from "react";
+import React from "react";
+import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts } from "../lib/store";
 
 function formatKRW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
+}
+
+function parseKorean(input: string): number {
+  if (!input) return 0;
+  const cleaned = input.replace(/[원,\s]/g, "").trim();
+  if (!cleaned) return 0;
+  if (/^\d+$/.test(cleaned)) return Number(cleaned);
+  let total = 0;
+  let remaining = cleaned;
+  const match = (pattern: RegExp, unit: number) => {
+    const m = remaining.match(pattern);
+    if (m) { total += parseFloat(m[1]) * unit; remaining = remaining.slice(m[0].length); }
+  };
+  match(/^(\d+(?:\.\d+)?)억/, 100000000);
+  match(/^(\d+(?:\.\d+)?)천만/, 10000000);
+  match(/^(\d+(?:\.\d+)?)만/, 10000);
+  match(/^(\d+(?:\.\d+)?)천/, 1000);
+  if (/^\d+$/.test(remaining)) total += Number(remaining);
+  return total || 0;
 }
 
 const inputCls =
   "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm";
 
 function NumField({ label, value, onChange, hint }: { label: string; value: number; onChange: (v: number) => void; hint?: string }) {
+  const [raw, setRaw] = useState(value > 0 ? String(value) : "");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRaw(e.target.value);
+    onChange(parseKorean(e.target.value));
+  };
+
   return (
     <div>
       <label className="block text-xs font-semibold text-zinc-500 mb-1.5">{label}</label>
       <div className="relative">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
         <input
-          type="number"
-          placeholder="0"
-          value={value || ""}
-          onChange={(e) => onChange(Number(e.target.value))}
+          type="text"
+          inputMode="text"
+          placeholder="0 또는 만원"
+          value={raw}
+          onChange={handleChange}
           className={inputCls + " pl-8"}
         />
       </div>
-      {formatManwon(value) && (
-        <p className="mt-1 text-xs font-medium text-blue-500">→ {formatManwon(value)}</p>
+      {parseKorean(raw) > 0 && (
+        <p className="mt-1 text-xs font-medium text-blue-500">→ {parseKorean(raw).toLocaleString("ko-KR")}원</p>
       )}
       {hint && <p className="mt-1 text-xs text-zinc-400">{hint}</p>}
     </div>
