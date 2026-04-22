@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getMembers, saveMembers, Member, formatManwon } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, Member, Trainer, formatManwon } from "../lib/store";
 
 function parseKorean(input: string): number {
   if (!input) return 0;
@@ -39,6 +39,7 @@ function formatKRW(n: number) {
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [form, setForm] = useState<Member>(empty());
   const [paymentInput, setPaymentInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -46,7 +47,18 @@ export default function MembersPage() {
 
   useEffect(() => {
     setMembers(getMembers());
+    setTrainers(getTrainers().filter((t) => t.status === "재직"));
   }, []);
+
+  // 트레이너 선택 시 고용형태 자동 반영
+  const handleTrainerSelect = (name: string) => {
+    const found = trainers.find((t) => t.name === name);
+    setForm({
+      ...form,
+      trainer: name,
+      trainerType: found ? found.empType : form.trainerType,
+    });
+  };
 
   const persist = (updated: Member[]) => {
     setMembers(updated);
@@ -204,13 +216,31 @@ export default function MembersPage() {
               />
             </Field>
             <Field label="담당 트레이너">
-              <input
-                type="text"
-                placeholder="트레이너 이름"
-                value={form.trainer}
-                onChange={(e) => setForm({ ...form, trainer: e.target.value })}
-                className={inputCls}
-              />
+              {trainers.length > 0 ? (
+                /* 트레이너 관리에 등록된 트레이너가 있으면 드롭다운 */
+                <select
+                  value={form.trainer}
+                  onChange={(e) => handleTrainerSelect(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">트레이너 선택</option>
+                  {trainers.map((t) => (
+                    <option key={t.id} value={t.name}>
+                      {t.name} ({t.empType}{t.branch ? ` · ${t.branch}` : ""})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                /* 트레이너 미등록 시 텍스트 입력 */
+                <input
+                  type="text"
+                  placeholder="트레이너 이름 (트레이너 관리에서 먼저 등록하세요)"
+                  value={form.trainer}
+                  onChange={(e) => setForm({ ...form, trainer: e.target.value })}
+                  className={inputCls}
+                />
+              )}
+              {/* 고용형태 토글 (드롭다운 선택 시 자동 세팅, 수동 변경도 가능) */}
               <div className="flex gap-2 mt-2">
                 {(["정규직", "프리랜서"] as const).map((type) => (
                   <button
@@ -229,6 +259,11 @@ export default function MembersPage() {
                   </button>
                 ))}
               </div>
+              {trainers.length === 0 && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  💡 트레이너 관리 페이지에서 등록하면 드롭다운으로 선택할 수 있습니다
+                </p>
+              )}
             </Field>
             <Field label="총 결제금액">
               <div className="relative">

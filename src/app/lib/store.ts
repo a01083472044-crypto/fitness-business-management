@@ -39,9 +39,21 @@ export interface CalcPrefill {
   isVat: boolean;
 }
 
-const MEMBERS_KEY = "gym_members";
-const COSTS_KEY = "gym_costs";
-const PREFILL_KEY = "calc_prefill";
+export interface Trainer {
+  id: string;
+  name: string;
+  phone: string;
+  branch: string;       // 지점명 (자유 입력)
+  status: "재직" | "퇴사";
+  empType: "정규직" | "프리랜서";
+  joinDate: string;     // YYYY-MM-DD
+  memo: string;
+}
+
+const MEMBERS_KEY  = "gym_members";
+const COSTS_KEY    = "gym_costs";
+const PREFILL_KEY  = "calc_prefill";
+const TRAINERS_KEY = "gym_trainers";
 
 export function getMembers(): Member[] {
   if (typeof window === "undefined") return [];
@@ -108,6 +120,15 @@ export function emptyCosts(month: string): MonthlyCosts {
     otherVariable: 0,
     isVat: false,
   };
+}
+
+export function getTrainers(): Trainer[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(TRAINERS_KEY) || "[]"); } catch { return []; }
+}
+
+export function saveTrainers(trainers: Trainer[]) {
+  localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
 }
 
 export function formatManwon(n: number): string | null {
