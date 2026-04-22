@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getTrainers, saveTrainers, Trainer } from "../lib/store";
+import { getTrainers, saveTrainers, Trainer, SalaryType } from "../lib/store";
 
 const inputCls =
   "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm";
@@ -27,6 +27,10 @@ function emptyTrainer(): Trainer {
     empType: "정규직",
     joinDate: new Date().toISOString().slice(0, 10),
     memo: "",
+    salaryType: "base+rate" as SalaryType,
+    baseSalary: 0,
+    commRate: 50,
+    sessionFee: 0,
   };
 }
 
@@ -186,6 +190,15 @@ export default function TrainersPage() {
                       {t.joinDate && (
                         <p className="text-xs text-zinc-300 mt-0.5">입사일 {t.joinDate}</p>
                       )}
+                      {(t.baseSalary > 0 || t.commRate > 0) && (
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          💰 {t.salaryType === "base+rate"
+                            ? `기본 ${(t.baseSalary/10000).toFixed(0)}만 + ${t.commRate}% 배분`
+                            : t.salaryType === "rate"
+                            ? `${t.commRate}% 배분`
+                            : `기본 ${(t.baseSalary/10000).toFixed(0)}만 + 회당 ${(t.sessionFee/10000).toFixed(1)}만`}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -256,6 +269,67 @@ export default function TrainersPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* 급여 구조 */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-zinc-500">급여 구조</p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: "base+rate",  label: "기본급\n+배분율"    },
+                  { key: "rate",       label: "배분율\n만"          },
+                  { key: "base+fixed", label: "기본급\n+고정수업료" },
+                ] as { key: SalaryType; label: string }[]).map(({ key, label }) => (
+                  <button key={key} type="button"
+                    onClick={() => setForm({ ...form, salaryType: key })}
+                    className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${
+                      form.salaryType === key
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-zinc-500 border-zinc-200"
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 기본급 — base+rate, base+fixed */}
+              {(form.salaryType === "base+rate" || form.salaryType === "base+fixed") && (
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
+                    {form.salaryType === "base+rate" ? "기본급/기본지원금 (월)" : "기본급 (월)"}
+                  </label>
+                  <input type="number" min="0" step="10000" placeholder="0"
+                    value={form.baseSalary || ""}
+                    onChange={(e) => setForm({ ...form, baseSalary: Number(e.target.value) })}
+                    className={inputCls} />
+                </div>
+              )}
+
+              {/* 배분율 — base+rate, rate */}
+              {(form.salaryType === "base+rate" || form.salaryType === "rate") && (
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
+                    매출 배분율: <span className="text-blue-600 font-bold">{form.commRate}%</span>
+                  </label>
+                  <input type="range" min="10" max="80" value={form.commRate}
+                    onChange={(e) => setForm({ ...form, commRate: Number(e.target.value) })}
+                    className="w-full accent-blue-600" />
+                  <div className="flex justify-between text-xs text-zinc-400 mt-1">
+                    <span>10%</span><span className="text-blue-600">40~60% 권장</span><span>80%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 고정 수업료 — base+fixed */}
+              {form.salaryType === "base+fixed" && (
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">고정 수업료 (회당)</label>
+                  <input type="number" min="0" step="1000" placeholder="0"
+                    value={form.sessionFee || ""}
+                    onChange={(e) => setForm({ ...form, sessionFee: Number(e.target.value) })}
+                    className={inputCls} />
+                </div>
+              )}
             </div>
 
             <Field label="이름" required>

@@ -1,5 +1,7 @@
 import { pushToCloud } from "./sync";
 
+export type SalaryType = "base+rate" | "rate" | "base+fixed";
+
 // ── 스케줄 ─────────────────────────────────────────────────────────────────
 export interface ScheduleEntry {
   id: string;
@@ -93,14 +95,42 @@ export interface Trainer {
   empType: "정규직" | "프리랜서";
   joinDate: string;
   memo: string;
+  salaryType: SalaryType;
+  baseSalary: number;   // 기본급/기본지원금
+  commRate: number;     // 매출 배분율 0~100
+  sessionFee: number;   // 고정 수업료 (회당)
+}
+
+export interface TrainerSettlement {
+  id: string;
+  month: string;           // YYYY-MM
+  trainerId: string;
+  trainerName: string;
+  empType: "정규직" | "프리랜서" | "";
+  salaryType: SalaryType;
+  baseSalary: number;
+  commRate: number;
+  sessionFee: number;
+  completedSessions: number;
+  ptRevenue: number;
+  incentive: number;
+  grossSalary: number;
+  netSalary: number;
+  withholdingTax: number;
+  insuranceCost: number;
+  companyCost: number;
+  settled: boolean;
+  settledAt: string;
+  memo: string;
 }
 
 // ── 스토리지 키 ────────────────────────────────────────────────────────────
-const SCHEDULE_KEY = "gym_schedule";
-const MEMBERS_KEY  = "gym_members";
-const COSTS_KEY    = "gym_costs";
-const PREFILL_KEY  = "calc_prefill";
-const TRAINERS_KEY = "gym_trainers";
+const SCHEDULE_KEY    = "gym_schedule";
+const MEMBERS_KEY     = "gym_members";
+const COSTS_KEY       = "gym_costs";
+const PREFILL_KEY     = "calc_prefill";
+const TRAINERS_KEY    = "gym_trainers";
+const SETTLEMENT_KEY  = "gym_settlements";
 
 // ── CRUD 함수 ──────────────────────────────────────────────────────────────
 export function getMembers(): Member[] {
@@ -155,12 +185,31 @@ export function saveSchedules(entries: ScheduleEntry[]) {
 
 export function getTrainers(): Trainer[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(TRAINERS_KEY) || "[]"); } catch { return []; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(TRAINERS_KEY) || "[]");
+    return raw.map((t: Trainer) => ({
+      ...t,
+      salaryType: t.salaryType ?? "base+rate",
+      baseSalary: t.baseSalary ?? 0,
+      commRate: t.commRate ?? 50,
+      sessionFee: t.sessionFee ?? 0,
+    }));
+  } catch { return []; }
 }
 
 export function saveTrainers(trainers: Trainer[]) {
   localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
   pushToCloud("trainers", trainers);
+}
+
+export function getSettlements(): TrainerSettlement[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(SETTLEMENT_KEY) || "[]"); } catch { return []; }
+}
+
+export function saveSettlements(settlements: TrainerSettlement[]) {
+  localStorage.setItem(SETTLEMENT_KEY, JSON.stringify(settlements));
+  pushToCloud("settlements", settlements);
 }
 
 // ── 유틸 ───────────────────────────────────────────────────────────────────

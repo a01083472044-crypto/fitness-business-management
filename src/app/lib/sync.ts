@@ -9,10 +9,11 @@ import { getGymCode } from "./gymCode";
 
 // collection → localStorage 키 매핑
 const KEY_MAP: Record<string, string> = {
-  members:   "gym_members",
-  trainers:  "gym_trainers",
-  costs:     "gym_costs",
-  schedules: "gym_schedule",
+  members:     "gym_members",
+  trainers:    "gym_trainers",
+  costs:       "gym_costs",
+  schedules:   "gym_schedule",
+  settlements: "gym_settlements",
 };
 
 export type SyncCollection = keyof typeof KEY_MAP;
