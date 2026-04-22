@@ -69,8 +69,9 @@ export default function SchedulePage() {
   const [members,   setMembers]   = useState<Member[]>([]);
   const [trainers,  setTrainers]  = useState<Trainer[]>([]);
 
-  const [weekBase,     setWeekBase]     = useState<Date>(today);
-  const [selectedDate, setSelectedDate] = useState<string>(toDateStr(today));
+  const [weekBase,      setWeekBase]      = useState<Date>(today);
+  const [selectedDate,  setSelectedDate]  = useState<string>(toDateStr(today));
+  const [selectedBranch, setSelectedBranch] = useState<string>("전체");
 
   // 모달
   const [showForm,  setShowForm]  = useState(false);
@@ -98,8 +99,22 @@ export default function SchedulePage() {
     [schedules, selectedDate]
   );
 
-  // 활성 트레이너 (해당 날짜에 등록된 트레이너 + 전체 재직자 합집합 → 달력에 표시할 트레이너)
-  const activeTrainers = trainers;
+  // 지점 목록 (트레이너 branch 필드에서 자동 추출, 빈 값 제외)
+  const branches = useMemo(() => {
+    const set = new Set(trainers.map((t) => t.branch).filter(Boolean));
+    return ["전체", ...Array.from(set)];
+  }, [trainers]);
+
+  // 지점이 여러 개일 때만 탭 표시
+  const showBranchTabs = branches.length > 2; // "전체" + 지점 1개 이상
+
+  // 지점 필터 적용된 트레이너 목록
+  const activeTrainers = useMemo(() =>
+    selectedBranch === "전체"
+      ? trainers
+      : trainers.filter((t) => t.branch === selectedBranch),
+    [trainers, selectedBranch]
+  );
 
   // 선택 회원의 패키지
   const memberPackages = useMemo(() => {
@@ -236,6 +251,27 @@ export default function SchedulePage() {
           </button>
         </div>
 
+        {/* 지점 탭 — 지점이 2개 이상일 때만 표시 */}
+        {showBranchTabs && (
+          <div className="max-w-lg mx-auto px-2">
+            <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
+              {branches.map((branch) => (
+                <button
+                  key={branch}
+                  onClick={() => setSelectedBranch(branch)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                    selectedBranch === branch
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-600"
+                  }`}
+                >
+                  {branch}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 주간 네비게이션 */}
         <div className="max-w-lg mx-auto px-2">
           <div className="bg-zinc-900 rounded-2xl px-4 py-3 flex items-center justify-between text-white">
@@ -288,8 +324,17 @@ export default function SchedulePage() {
         {activeTrainers.length === 0 && (
           <div className="max-w-lg mx-auto px-2">
             <div className="bg-white rounded-2xl border border-zinc-100 p-8 text-center text-zinc-400 text-sm">
-              <p>재직 중인 트레이너가 없습니다.</p>
-              <p className="mt-1 text-xs">트레이너 관리 페이지에서 먼저 등록해주세요.</p>
+              {selectedBranch === "전체" ? (
+                <>
+                  <p>재직 중인 트레이너가 없습니다.</p>
+                  <p className="mt-1 text-xs">트레이너 관리 페이지에서 먼저 등록해주세요.</p>
+                </>
+              ) : (
+                <>
+                  <p><strong>{selectedBranch}</strong>에 소속된 트레이너가 없습니다.</p>
+                  <p className="mt-1 text-xs">트레이너 관리에서 근무 지점을 확인해주세요.</p>
+                </>
+              )}
             </div>
           </div>
         )}
