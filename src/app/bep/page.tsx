@@ -47,6 +47,7 @@ export default function BepPage() {
   // 고정비
   const [rent, setRent] = useState("");
   const [salary, setSalary] = useState("");
+  const [freelance, setFreelance] = useState("");
   const [utilities, setUtilities] = useState("");
   const [depreciation, setDepreciation] = useState("");
   const [otherFixed, setOtherFixed] = useState("");
@@ -60,6 +61,7 @@ export default function BepPage() {
   const fixedCost =
     parseKorean(rent) +
     parseKorean(salary) * 1.09 +
+    parseKorean(freelance) * 1.033 +
     parseKorean(utilities) +
     parseKorean(depreciation) +
     parseKorean(otherFixed);
@@ -94,6 +96,7 @@ export default function BepPage() {
           <p className="font-bold text-zinc-900">월 고정비</p>
           <NumInput label="임차료 (월세)" value={rent} onChange={setRent} />
           <NumInput label="정규직 인건비 합계 (세전)" value={salary} onChange={setSalary} hint="4대보험(9%)은 자동 추가됩니다" />
+          <NumInput label="프리랜서 인건비 합계 (세전)" value={freelance} onChange={setFreelance} hint="원천징수(3.3%)는 자동 추가됩니다" />
           <NumInput label="공과금 · 통신비" value={utilities} onChange={setUtilities} />
           <NumInput label="감가상각비 (월)" value={depreciation} onChange={setDepreciation} />
           <NumInput label="기타 고정비" value={otherFixed} onChange={setOtherFixed} />
