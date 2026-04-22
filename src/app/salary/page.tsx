@@ -239,9 +239,9 @@ function IndividualCalc() {
           </div>
         )}
 
-        {/* 기본급 */}
+        {/* 고정급 */}
         <NumInput
-          label={role === "trainer" ? "기본지원금 (월)" : "기본급 (월)"}
+          label={role === "trainer" ? "기본지원금 (월)" : "고정급 (월)"}
           value={baseSalary}
           onChange={setBase}
           hint={role === "trainer" ? "국내 통상 50~80만원 수준" : undefined}
@@ -306,7 +306,9 @@ function IndividualCalc() {
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-zinc-500">기본급{role === "trainer" ? " (기본지원금)" : ""}</span>
+                <span className="text-zinc-500">
+                  {role === "trainer" ? "기본지원금" : "고정급"}
+                </span>
                 <span className="font-semibold text-zinc-800">{formatKRW(base)}</span>
               </div>
 
@@ -360,7 +362,7 @@ function IndividualCalc() {
             {role === "manager" && (
               <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
                 <div className="flex justify-between text-zinc-300">
-                  <span>기본급</span>
+                  <span>고정급</span>
                   <span>{formatKRW(base)}</span>
                 </div>
                 {incentive > 0 && (
@@ -429,10 +431,10 @@ function IndividualCalc() {
             <div className="bg-zinc-50 rounded-xl p-4 text-xs text-zinc-600 space-y-1.5">
               <p className="font-bold text-zinc-700">📋 회원 유지율 성과급 기준표</p>
               {[
-                { range: "90% 이상", label: "최우수", bonus: "기본급 × 35%", color: "text-emerald-600" },
-                { range: "80~89%",   label: "우수",   bonus: "기본급 × 25%", color: "text-blue-600"    },
-                { range: "70~79%",   label: "양호",   bonus: "기본급 × 15%", color: "text-yellow-600"  },
-                { range: "60~69%",   label: "보통",   bonus: "기본급 × 10%", color: "text-orange-500"  },
+                { range: "90% 이상", label: "최우수", bonus: "고정급 × 35%", color: "text-emerald-600" },
+                { range: "80~89%",   label: "우수",   bonus: "고정급 × 25%", color: "text-blue-600"    },
+                { range: "70~79%",   label: "양호",   bonus: "고정급 × 15%", color: "text-yellow-600"  },
+                { range: "60~69%",   label: "보통",   bonus: "고정급 × 10%", color: "text-orange-500"  },
                 { range: "60% 미만", label: "미달",   bonus: "성과급 없음",   color: "text-zinc-400"    },
               ].map((row) => (
                 <div key={row.range} className={`flex justify-between ${Number(retention) >= parseInt(row.range) ? "font-semibold" : ""}`}>
