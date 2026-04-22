@@ -136,8 +136,7 @@ function IndividualCalc() {
   const setRet2  = (v: string)    => { setRet(v);      p({ retention: v }); };
 
   const base      = parseKorean(baseSalary);
-  const taxRate   = empType === "정규직" ? 1.09 : 1.033;
-  const taxLabel  = empType === "정규직" ? "4대보험 9%" : "원천징수 3.3%";
+  const isFreelancer = empType === "프리랜서";
 
   let incentive   = 0;
   let grossSalary = 0;
@@ -153,7 +152,15 @@ function IndividualCalc() {
     grossSalary = base + incentive;
   }
 
-  const companyCost = grossSalary * taxRate;
+  // ✅ 정확한 사업자 실부담 계산
+  // 정규직: 세전 × 1.09 (4대보험 사업자 부담분 9% 추가 납부)
+  // 프리랜서: 세전 = 사업자 총비용 (3.3%는 세전에서 차감 후 사업자가 국세청에 대신 납부)
+  //           → 프리랜서 실수령 = 세전 × 0.967 / 원천세 = 세전 × 0.033
+  //           → 사업자 총지출 = 실수령 + 원천세 = 세전 × 1.0
+  const companyCost     = isFreelancer ? grossSalary : grossSalary * 1.09;
+  const freelancerNet   = isFreelancer ? grossSalary * 0.967 : 0; // 프리랜서 실수령
+  const withholdingTax  = isFreelancer ? grossSalary * 0.033 : 0; // 원천세 (사업자 납부)
+
   const retGrade    = retentionGrade(Number(retention));
 
   const hasResult = grossSalary > 0;
@@ -324,12 +331,55 @@ function IndividualCalc() {
           </div>
 
           {/* 사업자 부담 총비용 */}
-          <div className="bg-zinc-900 rounded-2xl p-5 text-white">
-            <p className="text-sm text-zinc-400 mb-1">사업자 실부담 총비용</p>
-            <p className="text-3xl font-black">{formatKRW(companyCost)}</p>
-            <p className="text-xs text-zinc-500 mt-2">
-              {grossSalary.toLocaleString("ko-KR")}원 × {taxRate === 1.09 ? "1.09 (4대보험 9%)" : "1.033 (원천징수 3.3%)"}
-            </p>
+          <div className="bg-zinc-900 rounded-2xl p-5 text-white space-y-3">
+            <div>
+              <p className="text-sm text-zinc-400 mb-1">사업자 실부담 총비용</p>
+              <p className="text-3xl font-black">{formatKRW(companyCost)}</p>
+            </div>
+
+            {/* 정규직: 4대보험 추가 납부 구조 */}
+            {!isFreelancer && (
+              <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between text-zinc-300">
+                  <span>직원 실수령 (세전)</span>
+                  <span>{formatKRW(grossSalary)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>4대보험 사업자 부담 (9% 추가)</span>
+                  <span>+ {formatKRW(grossSalary * 0.09)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
+                  <span>계산식</span>
+                  <span>{formatKRW(grossSalary)} × 1.09</span>
+                </div>
+              </div>
+            )}
+
+            {/* 프리랜서: 원천징수 차감 구조 */}
+            {isFreelancer && (
+              <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between text-zinc-300">
+                  <span>세전 합의 금액</span>
+                  <span>{formatKRW(grossSalary)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>원천징수 차감 (3.3%)</span>
+                  <span>− {formatKRW(withholdingTax)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-400 font-semibold">
+                  <span>프리랜서 실수령액</span>
+                  <span>{formatKRW(freelancerNet)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>사업자 → 국세청 원천세 납부</span>
+                  <span>{formatKRW(withholdingTax)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
+                  <span>실수령 + 원천세 = 사업자 총지출</span>
+                  <span>{formatKRW(freelancerNet)} + {formatKRW(withholdingTax)} = {formatKRW(companyCost)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 인센티브 비율 안내 (트레이너) */}
