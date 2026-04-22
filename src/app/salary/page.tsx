@@ -136,7 +136,8 @@ function IndividualCalc() {
   const setRet2  = (v: string)    => { setRet(v);      p({ retention: v }); };
 
   const base      = parseKorean(baseSalary);
-  const isFreelancer = empType === "프리랜서";
+  // 프론트/센터장은 항상 정규직 구조, 트레이너만 프리랜서 선택 가능
+  const isFreelancer = role === "trainer" && empType === "프리랜서";
 
   let incentive   = 0;
   let grossSalary = 0;
@@ -337,8 +338,8 @@ function IndividualCalc() {
               <p className="text-3xl font-black">{formatKRW(companyCost)}</p>
             </div>
 
-            {/* 정규직: 4대보험 추가 납부 구조 */}
-            {!isFreelancer && (
+            {/* 프론트 / 정규직 트레이너: 4대보험 추가 구조 */}
+            {!isFreelancer && role !== "manager" && (
               <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
                 <div className="flex justify-between text-zinc-300">
                   <span>직원 실수령 (세전)</span>
@@ -355,7 +356,35 @@ function IndividualCalc() {
               </div>
             )}
 
-            {/* 프리랜서: 원천징수 차감 구조 */}
+            {/* 센터장/팀장: 기본급 + 성과급 + 4대보험 구조 */}
+            {role === "manager" && (
+              <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between text-zinc-300">
+                  <span>기본급</span>
+                  <span>{formatKRW(base)}</span>
+                </div>
+                {incentive > 0 && (
+                  <div className="flex justify-between text-amber-400">
+                    <span>성과급 (유지율 {retention}% · {retGrade.bonus})</span>
+                    <span>+ {formatKRW(incentive)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-zinc-300 font-semibold border-t border-zinc-700 pt-1.5">
+                  <span>총 실수령 소계 (세전)</span>
+                  <span>{formatKRW(grossSalary)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>4대보험 사업자 부담 (9% 추가)</span>
+                  <span>+ {formatKRW(grossSalary * 0.09)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
+                  <span>계산식</span>
+                  <span>{formatKRW(grossSalary)} × 1.09</span>
+                </div>
+              </div>
+            )}
+
+            {/* 프리랜서 트레이너: 원천징수 차감 구조 */}
             {isFreelancer && (
               <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
                 <div className="flex justify-between text-zinc-300">
