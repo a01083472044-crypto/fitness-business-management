@@ -1,3 +1,17 @@
+// ── 스케줄 ─────────────────────────────────────────────────────────────────
+export interface ScheduleEntry {
+  id: string;
+  date: string;        // YYYY-MM-DD
+  startTime: string;   // "09:00"
+  trainerId: string;
+  trainerName: string;
+  memberId: string;
+  memberName: string;
+  packageId: string;   // "" = 패키지 미연동
+  note: string;
+  done: boolean;       // 완료 여부
+}
+
 // ── PT 패키지 ──────────────────────────────────────────────────────────────
 export interface SessionPackage {
   id: string;
@@ -80,6 +94,7 @@ export interface Trainer {
 }
 
 // ── 스토리지 키 ────────────────────────────────────────────────────────────
+const SCHEDULE_KEY = "gym_schedule";
 const MEMBERS_KEY  = "gym_members";
 const COSTS_KEY    = "gym_costs";
 const PREFILL_KEY  = "calc_prefill";
@@ -122,6 +137,15 @@ export function setPrefill(data: CalcPrefill) {
 
 export function clearPrefill() {
   localStorage.removeItem(PREFILL_KEY);
+}
+
+export function getSchedules(): ScheduleEntry[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(SCHEDULE_KEY) || "[]"); } catch { return []; }
+}
+
+export function saveSchedules(entries: ScheduleEntry[]) {
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(entries));
 }
 
 export function getTrainers(): Trainer[] {
