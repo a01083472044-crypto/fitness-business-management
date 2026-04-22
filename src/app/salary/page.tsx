@@ -80,11 +80,29 @@ function GradeBar({ ratio }: { ratio: number }) {
   );
 }
 
+const STORAGE_KEY = "gym_salary_calc";
+
+function loadSaved() {
+  if (typeof window === "undefined") return null;
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
+}
+
 export default function SalaryPage() {
-  const [actualRevenue, setActualRevenue] = useState("");
-  const [fullCount, setFullCount] = useState("");
-  const [freelanceCount, setFreeanceCount] = useState("");
-  const [targetRatio, setTargetRatio] = useState("35");
+  const saved = typeof window !== "undefined" ? loadSaved() : null;
+  const [actualRevenue, setActualRevenueRaw] = useState(saved?.actualRevenue ?? "");
+  const [fullCount, setFullCountRaw] = useState(saved?.fullCount ?? "");
+  const [freelanceCount, setFreeanceCountRaw] = useState(saved?.freelanceCount ?? "");
+  const [targetRatio, setTargetRatioRaw] = useState(saved?.targetRatio ?? "35");
+
+  function persist(patch: Record<string, string>) {
+    const cur = loadSaved() ?? {};
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch }));
+  }
+
+  const setActualRevenue = (v: string) => { setActualRevenueRaw(v); persist({ actualRevenue: v }); };
+  const setFullCount     = (v: string) => { setFullCountRaw(v);     persist({ fullCount: v }); };
+  const setFreeanceCount = (v: string) => { setFreeanceCountRaw(v); persist({ freelanceCount: v }); };
+  const setTargetRatio   = (v: string) => { setTargetRatioRaw(v);   persist({ targetRatio: v }); };
 
   const revenue = parseKorean(actualRevenue);
   const full = Number(fullCount) || 0;
