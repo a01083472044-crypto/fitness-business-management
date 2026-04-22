@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getMembers, saveMembers, getTrainers, Member, Trainer, formatManwon } from "../lib/store";
 
 function parseKorean(input: string): number {
@@ -31,6 +32,7 @@ const empty = (): Member => ({
   totalPayment: 0,
   totalSessions: 0,
   conductedSessions: 0,
+  packages: [],
 });
 
 function formatKRW(n: number) {
@@ -38,6 +40,7 @@ function formatKRW(n: number) {
 }
 
 export default function MembersPage() {
+  const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [form, setForm] = useState<Member>(empty());
@@ -180,9 +183,41 @@ export default function MembersPage() {
                   </div>
                   <div className="bg-zinc-50 rounded-lg p-2">
                     <p className="text-xs text-zinc-400">잔여</p>
-                    <p className="text-sm font-semibold text-zinc-800">{m.totalSessions - m.conductedSessions}회</p>
+                    <p className={`text-sm font-semibold ${
+                      m.totalSessions - m.conductedSessions === 0 && m.totalSessions > 0
+                        ? "text-red-500"
+                        : m.totalSessions - m.conductedSessions <= 3 && m.totalSessions > 0
+                        ? "text-orange-500"
+                        : "text-zinc-800"
+                    }`}>{m.totalSessions - m.conductedSessions}회</p>
                   </div>
                 </div>
+
+                {/* 패키지 요약 */}
+                {(m.packages ?? []).length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {(m.packages ?? []).map((pkg) => {
+                      const remain = pkg.totalSessions - pkg.conductedSessions;
+                      return (
+                        <div key={pkg.id} className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs ${
+                          remain === 0 ? "bg-red-50" : remain <= 3 ? "bg-orange-50" : "bg-zinc-50"
+                        }`}>
+                          <span className="font-medium text-zinc-700 truncate max-w-[60%]">{pkg.name}</span>
+                          <span className={`font-bold flex-shrink-0 ${
+                            remain === 0 ? "text-red-500" : remain <= 3 ? "text-orange-500" : "text-zinc-500"
+                          }`}>
+                            {remain === 0 ? "🔴 완료" : remain <= 3 ? `⚠️ 잔여 ${remain}회` : `잔여 ${remain}회`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <button
+                      onClick={() => router.push("/sessions")}
+                      className="w-full text-xs text-blue-500 hover:text-blue-700 py-1 font-semibold transition">
+                      수업 관리에서 상세 보기 →
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
