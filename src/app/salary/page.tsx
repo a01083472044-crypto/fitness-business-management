@@ -154,11 +154,13 @@ function IndividualCalc() {
   }
 
   // ✅ 정확한 사업자 실부담 계산
-  // 정규직: 세전 × 1.09 (4대보험 사업자 부담분 9% 추가 납부)
+  // 정규직: 세전 × 1.1065 (4대보험+산재 사업자 부담 10.65% 추가)
+  //   국민연금 4.5% + 건강보험 3.545% + 장기요양 0.4591% + 고용보험 1.15% + 산재 ~1.0%
   // 프리랜서: 세전 = 사업자 총비용 (3.3%는 세전에서 차감 후 사업자가 국세청에 대신 납부)
   //           → 프리랜서 실수령 = 세전 × 0.967 / 원천세 = 세전 × 0.033
   //           → 사업자 총지출 = 실수령 + 원천세 = 세전 × 1.0
-  const companyCost     = isFreelancer ? grossSalary : grossSalary * 1.09;
+  const INS_RATE        = 0.1065; // 4대보험 + 산재보험 사업자 부담률
+  const companyCost     = isFreelancer ? grossSalary : grossSalary * (1 + INS_RATE);
   const freelancerNet   = isFreelancer ? grossSalary * 0.967 : 0; // 프리랜서 실수령
   const withholdingTax  = isFreelancer ? grossSalary * 0.033 : 0; // 원천세 (사업자 납부)
 
@@ -348,12 +350,11 @@ function IndividualCalc() {
                   <span>{formatKRW(grossSalary)}</span>
                 </div>
                 <div className="flex justify-between text-zinc-400">
-                  <span>4대보험 사업자 부담 (9% 추가)</span>
-                  <span>+ {formatKRW(grossSalary * 0.09)}</span>
+                  <span>4대보험+산재 사업자 부담 (10.65%)</span>
+                  <span>+ {formatKRW(grossSalary * INS_RATE)}</span>
                 </div>
                 <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
-                  <span>계산식</span>
-                  <span>{formatKRW(grossSalary)} × 1.09</span>
+                  <span>국민연금4.5+건강3.545+장기요양0.46+고용1.15+산재1.0</span>
                 </div>
               </div>
             )}
@@ -376,12 +377,11 @@ function IndividualCalc() {
                   <span>{formatKRW(grossSalary)}</span>
                 </div>
                 <div className="flex justify-between text-zinc-400">
-                  <span>4대보험 사업자 부담 (9% 추가)</span>
-                  <span>+ {formatKRW(grossSalary * 0.09)}</span>
+                  <span>4대보험+산재 사업자 부담 (10.65%)</span>
+                  <span>+ {formatKRW(grossSalary * INS_RATE)}</span>
                 </div>
                 <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
-                  <span>계산식</span>
-                  <span>{formatKRW(grossSalary)} × 1.09</span>
+                  <span>국민연금4.5+건강3.545+장기요양0.46+고용1.15+산재1.0</span>
                 </div>
               </div>
             )}
@@ -488,7 +488,8 @@ export default function SalaryPage() {
   const fullBudget = full + freelance > 0 ? totalLaborBudget * (full / (full + freelance * 0.7)) : 0;
   const freelanceBudget = full + freelance > 0 ? totalLaborBudget - fullBudget : 0;
 
-  const perFull      = full > 0      ? fullBudget      / full      / 1.09  : 0;
+  const EMPLOYER_INS = 1.1065; // 4대보험+산재 사업자 부담 10.65%
+  const perFull      = full > 0      ? fullBudget      / full      / EMPLOYER_INS  : 0;
   const perFreelance = freelance > 0 ? freelanceBudget / freelance / 1.033 : 0;
 
   const currentLaborRatio = revenue > 0 ? (totalLaborBudget / revenue) * 100 : 0;
@@ -560,8 +561,8 @@ export default function SalaryPage() {
                       <p className="font-black text-zinc-900 text-lg">{formatKRW(perFull)}</p>
                     </div>
                     <div className="bg-blue-50 rounded-xl p-3 text-center">
-                      <p className="text-xs text-zinc-400 mb-1">4대보험 포함 총비용</p>
-                      <p className="font-black text-blue-700 text-lg">{formatKRW(perFull * 1.09)}</p>
+                      <p className="text-xs text-zinc-400 mb-1">4대보험+산재 포함 총비용</p>
+                      <p className="font-black text-blue-700 text-lg">{formatKRW(perFull * EMPLOYER_INS)}</p>
                     </div>
                   </div>
                   <p className="text-xs text-zinc-400">정규직 총 인건비 예산: {formatKRW(fullBudget)}</p>
@@ -591,7 +592,7 @@ export default function SalaryPage() {
 
             <div className="bg-zinc-50 rounded-xl p-4 text-xs text-zinc-500 space-y-1">
               <p className="font-semibold text-zinc-700">📌 계산 기준</p>
-              <p>· 정규직: 예산 ÷ 1.09 (4대보험 사업자 부담 9% 제외)</p>
+              <p>· 정규직: 예산 ÷ 1.1065 (4대보험+산재 사업자 부담 10.65% 제외)</p>
               <p>· 프리랜서: 예산 ÷ 1.033 (원천징수 3.3% 제외)</p>
               <p>· 정규직:프리랜서 예산 배분 = 인원비 기준 가중 분배</p>
             </div>
