@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getMembers, saveMembers, getTrainers, Member, Trainer, formatManwon } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, syncMemberTotals, Member, SessionPackage, Trainer, formatManwon } from "../lib/store";
 
 function parseKorean(input: string): number {
   if (!input) return 0;
@@ -88,12 +88,38 @@ export default function MembersPage() {
     }
   };
 
+  // 회원 저장 시 수업 관리 자동 연동
+  const buildAutoPackage = (m: Member): SessionPackage => ({
+    id: crypto.randomUUID(),
+    name: `${m.name} 수업`,
+    trainerName: m.trainer,
+    trainerType: m.trainerType,
+    totalSessions: m.totalSessions,
+    conductedSessions: m.conductedSessions,
+    paymentAmount: m.totalPayment,
+    registeredAt: new Date().toISOString().slice(0, 10),
+  });
+
   const handleSubmit = () => {
     if (!form.name.trim()) return;
+    const hasSessionData = form.totalSessions > 0 || form.totalPayment > 0;
+
     if (editingId) {
-      persist(members.map((m) => (m.id === editingId ? form : m)));
+      // 수정: 기존 패키지 없고 회차/금액 있으면 자동 생성
+      const existing = members.find((m) => m.id === editingId);
+      const existingPkgs = existing?.packages ?? [];
+      let updated = { ...form };
+      if (existingPkgs.length === 0 && hasSessionData) {
+        updated = syncMemberTotals({ ...updated, packages: [buildAutoPackage(form)] });
+      }
+      persist(members.map((m) => (m.id === editingId ? updated : m)));
     } else {
-      persist([...members, { ...form, id: crypto.randomUUID() }]);
+      // 신규: 회차/금액 있으면 자동 패키지 생성
+      let newMember = { ...form, id: crypto.randomUUID() };
+      if (hasSessionData) {
+        newMember = syncMemberTotals({ ...newMember, packages: [buildAutoPackage(newMember)] });
+      }
+      persist([...members, newMember]);
     }
     setShowForm(false);
   };
@@ -339,6 +365,25 @@ export default function MembersPage() {
                 />
               </Field>
             </div>
+
+            {/* 수업 관리 자동 연동 안내 */}
+            {(() => {
+              const hasData = form.totalSessions > 0 || form.totalPayment > 0;
+              const hasPkgs = (form.packages ?? []).length > 0;
+              if (!editingId && hasData) return (
+                <div className="bg-blue-50 rounded-xl px-3 py-2 text-xs text-blue-600 flex items-center gap-1.5">
+                  <span>🔗</span>
+                  <span>저장 시 <strong>수업 관리</strong>에 패키지가 자동 생성됩니다</span>
+                </div>
+              );
+              if (editingId && hasPkgs) return (
+                <div className="bg-zinc-50 rounded-xl px-3 py-2 text-xs text-zinc-400 flex items-center gap-1.5">
+                  <span>ℹ️</span>
+                  <span>패키지가 이미 있습니다. 회차 수정은 <strong>수업 관리</strong>에서 해주세요</span>
+                </div>
+              );
+              return null;
+            })()}
 
             <div className="flex gap-3 pt-1">
               <button
