@@ -9,9 +9,9 @@ const links = [
   { href: "/sessions",  label: "수업 관리"    },
   { href: "/schedule",  label: "수업 스케줄"  },
   { href: "/costs",     label: "비용 관리"    },
-  { href: "/dashboard", label: "대시보드"     },
-  { href: "/salary",    label: "급여 계산기"  },
   { href: "/bep",       label: "손익분기점"   },
+  { href: "/salary",    label: "급여 계산기"  },
+  { href: "/dashboard", label: "대시보드"     },
   { href: "/",          label: "계산기"       },
 ];
 
