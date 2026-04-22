@@ -1,3 +1,5 @@
+import { pushToCloud } from "./sync";
+
 // ── 스케줄 ─────────────────────────────────────────────────────────────────
 export interface ScheduleEntry {
   id: string;
@@ -112,6 +114,7 @@ export function getMembers(): Member[] {
 
 export function saveMembers(members: Member[]) {
   localStorage.setItem(MEMBERS_KEY, JSON.stringify(members));
+  pushToCloud("members", members);
 }
 
 export function getCosts(): MonthlyCosts[] {
@@ -121,6 +124,7 @@ export function getCosts(): MonthlyCosts[] {
 
 export function saveCosts(costs: MonthlyCosts[]) {
   localStorage.setItem(COSTS_KEY, JSON.stringify(costs));
+  pushToCloud("costs", costs);
 }
 
 export function getPrefill(): CalcPrefill | null {
@@ -146,6 +150,7 @@ export function getSchedules(): ScheduleEntry[] {
 
 export function saveSchedules(entries: ScheduleEntry[]) {
   localStorage.setItem(SCHEDULE_KEY, JSON.stringify(entries));
+  pushToCloud("schedules", entries);
 }
 
 export function getTrainers(): Trainer[] {
@@ -155,6 +160,7 @@ export function getTrainers(): Trainer[] {
 
 export function saveTrainers(trainers: Trainer[]) {
   localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
+  pushToCloud("trainers", trainers);
 }
 
 // ── 유틸 ───────────────────────────────────────────────────────────────────

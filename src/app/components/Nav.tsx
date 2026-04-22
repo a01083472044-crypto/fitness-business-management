@@ -13,6 +13,7 @@ const links = [
   { href: "/salary",    label: "급여 계산기"  },
   { href: "/dashboard", label: "대시보드"     },
   { href: "/",          label: "계산기"       },
+  { href: "/sync",      label: "📱 동기화"    },
 ];
 
 export default function Nav() {
