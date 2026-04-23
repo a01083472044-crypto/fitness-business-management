@@ -106,7 +106,7 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
   const totalTax = vat + incomeTaxReserve;
 
   const trainerSalary = parseKorean(s2.trainerSalary);
-  const insurance = trainerSalary * 0.09;
+  const insurance = trainerSalary * 0.1065;
   const freelanceSalary = parseKorean(s2.freelanceSalary);
   const freelanceTax = freelanceSalary * 0.033;
   const equipmentCost = parseKorean(s2.equipmentCost);
@@ -503,7 +503,7 @@ export default function Calculator() {
             placeholder="₩"
             value={s2.trainerSalary}
             onChange={(v) => setS2({ ...s2, trainerSalary: v })}
-            hint="4대보험(9%)은 자동 계산됩니다"
+            hint="4대보험+산재(10.65%)는 자동 계산됩니다"
           />
           <NumberInput
             label="프리랜서 인건비 합계"
@@ -711,7 +711,7 @@ export default function Calculator() {
 
             <Row label="고정비 합계" value={-result.totalFixed} red />
             <div className="pl-4 space-y-1">
-              <SubRow label="4대보험 (9%)" value={-result.insurance} />
+              <SubRow label="4대보험+산재 (10.65%)" value={-result.insurance} />
               {result.freelanceTax > 0 && (
                 <SubRow label="원천징수 (3.3%)" value={-result.freelanceTax} />
               )}
