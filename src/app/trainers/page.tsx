@@ -325,9 +325,10 @@ export default function TrainersPage() {
                     <input
                       type="number" min="10" max="80" step="1" placeholder="50"
                       value={form.commRate || ""}
-                      onChange={(e) => {
-                        const v = Math.min(80, Math.max(10, Number(e.target.value)));
-                        setForm({ ...form, commRate: v });
+                      onChange={(e) => setForm({ ...form, commRate: Number(e.target.value) })}
+                      onBlur={(e) => {
+                        const v = Math.min(80, Math.max(10, Number(e.target.value) || 10));
+                        setForm((prev) => ({ ...prev, commRate: v }));
                       }}
                       className={inputCls + " pr-10"}
                     />
