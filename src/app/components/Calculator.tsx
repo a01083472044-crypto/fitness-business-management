@@ -660,7 +660,7 @@ export default function Calculator() {
         <div className="space-y-4">
           {/* Shock card */}
           <div className="rounded-2xl bg-zinc-900 p-6 text-white">
-            <p className="text-sm text-zinc-400 mb-1">내가 생각한 이번달 수익</p>
+            <p className="text-sm text-zinc-400 mb-1">이번달 총 결제금액</p>
             <p className="text-3xl font-bold text-white mb-4">
               {formatKRW(result.totalPayment)}
             </p>
@@ -674,9 +674,9 @@ export default function Calculator() {
               {formatKRW(result.netProfit)}
             </p>
             <p className="text-sm mt-3 text-zinc-400">
-              착각하고 있던 금액:{" "}
+              미소진 부채 (잔여 수업 의무):{" "}
               <span className="text-yellow-400 font-bold">
-                {formatKRW(Math.abs(result.totalPayment - result.netProfit))}
+                {formatKRW(result.unpaidLiability)}
               </span>
             </p>
           </div>
