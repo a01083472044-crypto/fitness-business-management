@@ -298,10 +298,20 @@ export default function TrainersPage() {
                   <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
                     {form.salaryType === "base+rate" ? "기본급/기본지원금 (월)" : "기본급 (월)"}
                   </label>
-                  <input type="number" min="0" step="10000" placeholder="0"
-                    value={form.baseSalary || ""}
-                    onChange={(e) => setForm({ ...form, baseSalary: Number(e.target.value) })}
-                    className={inputCls} />
+                  <div className="relative">
+                    <input
+                      type="number" min="0" step="1" placeholder="0"
+                      value={form.baseSalary ? form.baseSalary / 10000 : ""}
+                      onChange={(e) => setForm({ ...form, baseSalary: Math.round(Number(e.target.value) * 10000) })}
+                      className={inputCls + " pr-14"}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-400 pointer-events-none">만원</span>
+                  </div>
+                  {form.baseSalary > 0 && (
+                    <p className="mt-1.5 text-xs text-blue-600 font-semibold">
+                      = {form.baseSalary.toLocaleString()}원
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -324,10 +334,20 @@ export default function TrainersPage() {
               {form.salaryType === "base+fixed" && (
                 <div>
                   <label className="block text-xs font-semibold text-zinc-500 mb-1.5">고정 수업료 (회당)</label>
-                  <input type="number" min="0" step="1000" placeholder="0"
-                    value={form.sessionFee || ""}
-                    onChange={(e) => setForm({ ...form, sessionFee: Number(e.target.value) })}
-                    className={inputCls} />
+                  <div className="relative">
+                    <input
+                      type="number" min="0" step="0.1" placeholder="0"
+                      value={form.sessionFee ? form.sessionFee / 10000 : ""}
+                      onChange={(e) => setForm({ ...form, sessionFee: Math.round(Number(e.target.value) * 10000) })}
+                      className={inputCls + " pr-14"}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-400 pointer-events-none">만원</span>
+                  </div>
+                  {form.sessionFee > 0 && (
+                    <p className="mt-1.5 text-xs text-blue-600 font-semibold">
+                      = {form.sessionFee.toLocaleString()}원 / 회
+                    </p>
+                  )}
                 </div>
               )}
             </div>
