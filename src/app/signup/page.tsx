@@ -36,28 +36,17 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    // 1) Supabase Auth 계정 생성
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    // Supabase Auth 계정 생성 (트리거가 자동으로 user_profiles 생성)
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName.trim() } },
+    });
+
     if (signUpError || !data.user) {
       setError(signUpError?.message === "User already registered"
         ? "이미 가입된 이메일입니다."
         : (signUpError?.message ?? "가입에 실패했습니다."));
-      setLoading(false);
-      return;
-    }
-
-    // 2) user_profiles 생성 (승인 대기 상태: role='pending')
-    const { error: profileError } = await supabase.from("user_profiles").insert({
-      id:        data.user.id,
-      email,
-      full_name: fullName.trim(),
-      branch:    "",
-      role:      "pending",
-      gym_code:  "",
-    });
-
-    if (profileError) {
-      setError("프로필 저장에 실패했습니다: " + profileError.message);
       setLoading(false);
       return;
     }
