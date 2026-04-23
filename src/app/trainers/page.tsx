@@ -318,12 +318,24 @@ export default function TrainersPage() {
               {/* 배분율 — base+rate, rate */}
               {(form.salaryType === "base+rate" || form.salaryType === "rate") && (
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
-                    매출 배분율: <span className="text-blue-600 font-bold">{form.commRate}%</span>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-2">
+                    매출 배분율
                   </label>
+                  <div className="relative">
+                    <input
+                      type="number" min="10" max="80" step="1" placeholder="50"
+                      value={form.commRate || ""}
+                      onChange={(e) => {
+                        const v = Math.min(80, Math.max(10, Number(e.target.value)));
+                        setForm({ ...form, commRate: v });
+                      }}
+                      className={inputCls + " pr-10"}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-400 pointer-events-none">%</span>
+                  </div>
                   <input type="range" min="10" max="80" value={form.commRate}
                     onChange={(e) => setForm({ ...form, commRate: Number(e.target.value) })}
-                    className="w-full accent-blue-600" />
+                    className="w-full accent-blue-600 mt-2" />
                   <div className="flex justify-between text-xs text-zinc-400 mt-1">
                     <span>10%</span><span className="text-blue-600">40~60% 권장</span><span>80%</span>
                   </div>
