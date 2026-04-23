@@ -131,6 +131,7 @@ const COSTS_KEY       = "gym_costs";
 const PREFILL_KEY     = "calc_prefill";
 const TRAINERS_KEY    = "gym_trainers";
 const SETTLEMENT_KEY  = "gym_settlements";
+const BRANCHES_KEY    = "gym_branches";
 
 // ── CRUD 함수 ──────────────────────────────────────────────────────────────
 export function getMembers(): Member[] {
@@ -200,6 +201,15 @@ export function getTrainers(): Trainer[] {
 export function saveTrainers(trainers: Trainer[]) {
   localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
   pushToCloud("trainers", trainers);
+}
+
+export function getBranches(): string[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(BRANCHES_KEY) || "[]"); } catch { return []; }
+}
+
+export function saveBranches(branches: string[]) {
+  localStorage.setItem(BRANCHES_KEY, JSON.stringify(branches));
 }
 
 export function getSettlements(): TrainerSettlement[] {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   getSchedules, saveSchedules, getMembers, saveMembers,
-  getTrainers, syncMemberTotals,
+  getTrainers, syncMemberTotals, getBranches, saveBranches,
   ScheduleEntry, Member, Trainer,
 } from "../lib/store";
 
@@ -68,10 +68,16 @@ export default function SchedulePage() {
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [members,   setMembers]   = useState<Member[]>([]);
   const [trainers,  setTrainers]  = useState<Trainer[]>([]);
+  const [savedBranches, setSavedBranches] = useState<string[]>([]);
 
   const [weekBase,      setWeekBase]      = useState<Date>(today);
   const [selectedDate,  setSelectedDate]  = useState<string>(toDateStr(today));
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
+
+  // 지점 추가 모달
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  const [newBranchName,   setNewBranchName]   = useState("");
+  const [branchDeleteMode, setBranchDeleteMode] = useState(false);
 
   // 모달
   const [showForm,  setShowForm]  = useState(false);
@@ -89,6 +95,7 @@ export default function SchedulePage() {
     setSchedules(getSchedules());
     setMembers(getMembers());
     setTrainers(getTrainers().filter((t) => t.status === "재직"));
+    setSavedBranches(getBranches());
   }, []);
 
   const weekDates = useMemo(() => getWeekDates(weekBase), [weekBase]);
@@ -99,14 +106,40 @@ export default function SchedulePage() {
     [schedules, selectedDate]
   );
 
-  // 지점 목록 (트레이너 branch 필드에서 자동 추출, 빈 값 제외)
+  // 지점 목록 (저장된 지점 + 트레이너 branch 필드 합산, 중복 제거)
   const branches = useMemo(() => {
-    const set = new Set(trainers.map((t) => t.branch).filter(Boolean));
-    return ["전체", ...Array.from(set)];
-  }, [trainers]);
+    const fromTrainers = trainers.map((t) => t.branch).filter(Boolean);
+    const merged = Array.from(new Set([...savedBranches, ...fromTrainers]));
+    return ["전체", ...merged];
+  }, [trainers, savedBranches]);
 
-  // 지점이 여러 개일 때만 탭 표시
-  const showBranchTabs = branches.length > 2; // "전체" + 지점 1개 이상
+  // 지점 탭 항상 표시 (저장된 지점 있으면)
+  const showBranchTabs = branches.length > 1;
+
+  // 지점 추가 핸들러
+  const handleAddBranch = () => {
+    const name = newBranchName.trim();
+    if (!name) return;
+    if (branches.includes(name)) {
+      alert("이미 존재하는 지점명입니다.");
+      return;
+    }
+    const updated = [...savedBranches, name];
+    setSavedBranches(updated);
+    saveBranches(updated);
+    setSelectedBranch(name);
+    setNewBranchName("");
+    setShowBranchModal(false);
+  };
+
+  // 지점 삭제 핸들러
+  const handleDeleteBranch = (branch: string) => {
+    if (!confirm(`"${branch}" 지점을 삭제하시겠습니까?\n해당 지점에 소속된 트레이너 데이터는 삭제되지 않습니다.`)) return;
+    const updated = savedBranches.filter((b) => b !== branch);
+    setSavedBranches(updated);
+    saveBranches(updated);
+    if (selectedBranch === branch) setSelectedBranch("전체");
+  };
 
   // 지점 필터 적용된 트레이너 목록
   const activeTrainers = useMemo(() =>
@@ -251,26 +284,52 @@ export default function SchedulePage() {
           </button>
         </div>
 
-        {/* 지점 탭 — 지점이 2개 이상일 때만 표시 */}
-        {showBranchTabs && (
-          <div className="max-w-lg mx-auto px-2">
-            <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
+        {/* 지점 탭 */}
+        <div className="max-w-lg mx-auto px-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex gap-1 bg-zinc-100 p-1 rounded-xl overflow-x-auto scrollbar-hide">
               {branches.map((branch) => (
-                <button
-                  key={branch}
-                  onClick={() => setSelectedBranch(branch)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
-                    selectedBranch === branch
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-400 hover:text-zinc-600"
-                  }`}
-                >
-                  {branch}
-                </button>
+                <div key={branch} className="relative flex-shrink-0">
+                  <button
+                    onClick={() => setSelectedBranch(branch)}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                      selectedBranch === branch
+                        ? "bg-white text-zinc-900 shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-600"
+                    }`}
+                  >
+                    {branch}
+                  </button>
+                  {/* 삭제 버튼 — "전체" 탭과 트레이너에서 온 지점 제외, 저장된 지점만 */}
+                  {branchDeleteMode && branch !== "전체" && savedBranches.includes(branch) && (
+                    <button
+                      onClick={() => handleDeleteBranch(branch)}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center leading-none hover:bg-red-600 transition"
+                    >×</button>
+                  )}
+                </div>
               ))}
             </div>
+            {/* 편집 토글 버튼 */}
+            {savedBranches.length > 0 && (
+              <button
+                onClick={() => setBranchDeleteMode((v) => !v)}
+                className={`flex-shrink-0 w-8 h-8 rounded-lg text-sm font-bold transition ${
+                  branchDeleteMode
+                    ? "bg-red-100 text-red-500"
+                    : "bg-zinc-100 text-zinc-400 hover:text-zinc-600"
+                }`}
+              >
+                {branchDeleteMode ? "✓" : "✎"}
+              </button>
+            )}
+            {/* 지점 추가 버튼 */}
+            <button
+              onClick={() => { setShowBranchModal(true); setBranchDeleteMode(false); }}
+              className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white text-lg font-bold flex items-center justify-center hover:bg-blue-700 transition"
+            >+</button>
           </div>
-        )}
+        </div>
 
         {/* 주간 네비게이션 */}
         <div className="max-w-lg mx-auto px-2">
@@ -426,6 +485,55 @@ export default function SchedulePage() {
           </div>
         )}
       </div>
+
+      {/* 지점 추가 모달 */}
+      {showBranchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <p className="font-bold text-zinc-900 text-lg">새 지점 추가</p>
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 mb-1.5">지점명</label>
+              <input
+                type="text"
+                placeholder="예: 강남점, 홍대점"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddBranch()}
+                className={inputCls}
+                autoFocus
+              />
+            </div>
+            {/* 기존 지점 목록 */}
+            {savedBranches.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 mb-1.5">등록된 지점</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {savedBranches.map((b) => (
+                    <span key={b} className="px-2.5 py-1 bg-zinc-100 rounded-lg text-xs text-zinc-600 font-medium">
+                      {b}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => { setShowBranchModal(false); setNewBranchName(""); }}
+                className="flex-1 rounded-xl border border-zinc-200 py-3 font-semibold text-zinc-600 hover:bg-zinc-50 transition"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAddBranch}
+                disabled={!newBranchName.trim()}
+                className="flex-[2] rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 등록/수정 모달 */}
       {showForm && (
