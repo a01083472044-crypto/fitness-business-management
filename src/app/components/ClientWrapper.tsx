@@ -7,10 +7,10 @@ import Nav from "./Nav";
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname();
   const { profile, loading, isAdmin, activeBranch, signOut } = useAuth();
-  const isLogin   = pathname === "/login";
+  const isPublicPage = pathname === "/login" || pathname === "/signup";
 
-  // 로그인 페이지는 Nav 없이
-  if (isLogin) return <>{children}</>;
+  // 로그인/회원가입 페이지는 Nav 없이
+  if (isPublicPage) return <>{children}</>;
 
   // 로딩 중
   if (loading) {
