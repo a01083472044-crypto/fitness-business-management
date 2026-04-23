@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   getTrainers, getSchedules, getMembers, getSettlements, saveSettlements,
+  getCosts, saveCosts, emptyCosts,
   Trainer, TrainerSettlement, ScheduleEntry, Member,
 } from "../lib/store";
 
@@ -75,6 +76,18 @@ function calcDraft(
   };
 }
 
+// 급여정산 완료 → 비용관리 자동 반영
+function syncToCosts(month: string, allSettlements: TrainerSettlement[]) {
+  const settled = allSettlements.filter((s) => s.month === month && s.settled);
+  if (settled.length === 0) return;
+  const fullGross = settled.filter((s) => s.empType === "정규직").reduce((sum, s) => sum + s.grossSalary, 0);
+  const freeGross = settled.filter((s) => s.empType === "프리랜서").reduce((sum, s) => sum + s.grossSalary, 0);
+  const allCosts = getCosts();
+  const existing = allCosts.find((c) => c.month === month) ?? emptyCosts(month);
+  const updated = { ...existing, trainerSalary: fullGross, freelanceSalary: freeGross };
+  saveCosts([...allCosts.filter((c) => c.month !== month), updated]);
+}
+
 function salaryTypeLabel(t: Trainer) {
   if (t.salaryType === "rate") return `매출 ${t.commRate}% 배분`;
   if (t.salaryType === "base+rate") return `기본 ${fmtW(t.baseSalary)} + ${t.commRate}% 배분`;
@@ -137,6 +150,7 @@ export default function SettlementPage() {
     ];
     setSettlements(next);
     saveSettlements(next);
+    syncToCosts(selMonth, next);
   }
 
   function unsettle(trainerId: string) {
@@ -178,6 +192,7 @@ export default function SettlementPage() {
     }
     setSettlements(next);
     saveSettlements(next);
+    syncToCosts(selMonth, next);
   }
 
   const totalCompanyCost = activeTrainers.reduce((sum, t) => {

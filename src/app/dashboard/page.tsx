@@ -1,19 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getMembers, getCosts, emptyCosts, currentMonth, setPrefill, MonthlyCosts } from "../lib/store";
+import {
+  getMembers, getCosts, getSchedules, getSettlements, getTrainers,
+  emptyCosts, currentMonth, setPrefill,
+  MonthlyCosts, ScheduleEntry, Member, TrainerSettlement,
+} from "../lib/store";
 
-function formatKRW(n: number) {
+const INS_RATE = 0.1065;
+
+function fmtW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function calcMonthRevenue(schedules: ScheduleEntry[], members: Member[], month: string) {
+  let revenue = 0;
+  let sessions = 0;
+  for (const s of schedules) {
+    if (!s.date.startsWith(month) || !s.done) continue;
+    sessions++;
+    if (s.packageId) {
+      for (const m of members) {
+        const pkg = m.packages?.find((p) => p.id === s.packageId);
+        if (pkg && pkg.totalSessions > 0) {
+          revenue += pkg.paymentAmount / pkg.totalSessions;
+          break;
+        }
+      }
+    }
+  }
+  return { revenue, sessions };
+}
+
+function Row({ label, value, sub, plus }: { label: string; value: string; sub?: string; plus?: boolean }) {
   return (
-    <div className="bg-white rounded-2xl border border-zinc-100 p-4">
-      <p className="text-xs text-zinc-400 mb-1">{label}</p>
-      <p className="text-xl font-black text-zinc-900">{value}</p>
-      {sub && <p className="text-xs text-zinc-400 mt-0.5">{sub}</p>}
+    <div className="flex justify-between items-center py-1.5 text-sm">
+      <span className="text-zinc-500">{label}</span>
+      <div className="text-right">
+        <span className={`font-semibold ${plus ? "text-blue-600" : "text-zinc-800"}`}>{value}</span>
+        {sub && <p className="text-xs text-zinc-400">{sub}</p>}
+      </div>
     </div>
   );
 }
@@ -22,58 +49,91 @@ export default function DashboardPage() {
   const router = useRouter();
   const [month, setMonth] = useState(currentMonth());
   const [costs, setCosts] = useState<MonthlyCosts>(emptyCosts(currentMonth()));
-  const [memberStats, setMemberStats] = useState({ totalPayment: 0, totalSessions: 0, conductedSessions: 0, count: 0 });
+  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [settlements, setSettlements] = useState<TrainerSettlement[]>([]);
+  const [trainerCount, setTrainerCount] = useState(0);
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    const members = getMembers();
-    setMemberStats({
-      totalPayment: members.reduce((s, m) => s + m.totalPayment, 0),
-      totalSessions: members.reduce((s, m) => s + m.totalSessions, 0),
-      conductedSessions: members.reduce((s, m) => s + m.conductedSessions, 0),
-      count: members.length,
-    });
+    setSchedules(getSchedules());
+    setMembers(getMembers());
+    setSettlements(getSettlements());
+    setTrainerCount(getTrainers().filter((t) => t.status === "재직").length);
+  }, []);
 
+  useEffect(() => {
     const all = getCosts();
-    const found = all.find((c) => c.month === month);
-    setCosts(found ?? emptyCosts(month));
+    setCosts(all.find((c) => c.month === month) ?? emptyCosts(month));
     setSent(false);
   }, [month]);
 
-  const ratio = memberStats.totalSessions > 0 ? memberStats.conductedSessions / memberStats.totalSessions : 0;
-  const actualRevenue = memberStats.totalPayment * ratio;
-  const unpaidLiability = memberStats.totalPayment * (1 - ratio);
-  const vat = costs.isVat ? actualRevenue * 0.1 : 0;
-  const incomeTax = actualRevenue * 0.033;
-  const insurance = costs.trainerSalary * 0.09;
-  const freelanceTax = costs.freelanceSalary * 0.033;
-  const totalFixed = costs.rent + costs.trainerSalary + insurance + costs.freelanceSalary + freelanceTax + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
-  const totalVariable = costs.supplies + costs.marketing + costs.otherVariable;
-  const netProfit = actualRevenue - vat - incomeTax - totalFixed - totalVariable;
+  // ── 이번달 스케줄 기준 매출 ──────────────────────────────────────────────
+  const { revenue: scheduleRevenue, sessions: doneSessions } = useMemo(
+    () => calcMonthRevenue(schedules, members, month),
+    [schedules, members, month]
+  );
 
-  // 인건비 안전 진단
-  const totalLaborCost = costs.trainerSalary + insurance + costs.freelanceSalary + freelanceTax;
-  const laborRatio = actualRevenue > 0 ? (totalLaborCost / actualRevenue) * 100 : 0;
+  // ── 회원 누적 집계 ────────────────────────────────────────────────────────
+  const totalMembers   = members.length;
+  const totalPaid      = members.reduce((s, m) => s + m.totalPayment, 0);
+  const totalSessions  = members.reduce((s, m) => s + m.totalSessions, 0);
+  const conductedTotal = members.reduce((s, m) => s + m.conductedSessions, 0);
+  const allTimeRatio   = totalSessions > 0 ? conductedTotal / totalSessions : 0;
+
+  // 실소진매출: 스케줄 기준 우선, 없으면 누적 비율 추정
+  const actualRevenue = scheduleRevenue > 0 ? scheduleRevenue : totalPaid * allTimeRatio;
+  const revenueSource = scheduleRevenue > 0 ? "스케줄 완료 기준" : "누적 소진률 추정";
+
+  // ── 급여 정산 데이터 ─────────────────────────────────────────────────────
+  const monthSettlements = useMemo(
+    () => settlements.filter((s) => s.month === month && s.settled),
+    [settlements, month]
+  );
+  const settledCount      = monthSettlements.length;
+  const hasSettlement     = settledCount > 0;
+  const settledSalaryCost = monthSettlements.reduce((s, r) => s + r.companyCost, 0);
+
+  // ── 비용 계산 ─────────────────────────────────────────────────────────────
+  // 급여: 정산 완료분 우선, 없으면 비용관리 수동입력
+  const manualSalaryCost    = costs.trainerSalary * (1 + INS_RATE) + costs.freelanceSalary;
+  const effectiveSalaryCost = hasSettlement ? settledSalaryCost : manualSalaryCost;
+  const salarySource        = hasSettlement ? `급여 정산 (${settledCount}명 완료)` : "비용 관리 수동 입력";
+
+  const vat           = costs.isVat ? actualRevenue * 0.1 : 0;
+  const otherFixed    = costs.rent + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
+  const totalVariable = costs.supplies + costs.marketing + costs.otherVariable;
+  const netProfit     = actualRevenue - vat - effectiveSalaryCost - otherFixed - totalVariable;
+
+  // ── 인건비 진단 ───────────────────────────────────────────────────────────
+  const laborRatio = actualRevenue > 0 ? (effectiveSalaryCost / actualRevenue) * 100 : 0;
   const laborGrade =
     laborRatio === 0 ? null :
-    laborRatio < 30 ? { label: "안전", color: "emerald", desc: "인건비 비율이 적정 수준입니다.", icon: "✅" } :
-    laborRatio < 40 ? { label: "주의", color: "yellow", desc: "인건비가 권장 범위 상단에 근접합니다.", icon: "⚠️" } :
-                      { label: "위험", color: "red", desc: "인건비가 매출의 40%를 초과했습니다. 수익성 검토가 필요합니다.", icon: "🔴" };
+    laborRatio < 30  ? { label: "안전", color: "emerald", icon: "✅", desc: "인건비 비율 적정" } :
+    laborRatio < 40  ? { label: "주의", color: "yellow",  icon: "⚠️", desc: "권장 범위 상단 근접" } :
+                       { label: "위험", color: "red",     icon: "🔴", desc: "40% 초과 — 즉각 검토 필요" };
 
   const handleSendToCalc = () => {
+    const fullGross = hasSettlement
+      ? monthSettlements.filter((s) => s.empType === "정규직").reduce((sum, s) => sum + s.grossSalary, 0)
+      : costs.trainerSalary;
+    const freeGross = hasSettlement
+      ? monthSettlements.filter((s) => s.empType === "프리랜서").reduce((sum, s) => sum + s.grossSalary, 0)
+      : costs.freelanceSalary;
+
     setPrefill({
-      totalPayment: memberStats.totalPayment,
-      totalSessions: memberStats.totalSessions,
-      conductedSessions: memberStats.conductedSessions,
-      rent: costs.rent,
-      trainerSalary: costs.trainerSalary,
-      freelanceSalary: costs.freelanceSalary,
-      depreciation: costs.depreciation,
-      otherFixed: costs.utilities + costs.communication + costs.otherFixed,
-      supplies: costs.supplies,
-      marketing: costs.marketing,
-      otherVariable: costs.otherVariable,
-      isVat: costs.isVat,
+      totalPayment:      totalPaid,
+      totalSessions:     totalSessions,
+      conductedSessions: conductedTotal,
+      rent:              costs.rent,
+      trainerSalary:     fullGross,
+      freelanceSalary:   freeGross,
+      depreciation:      costs.depreciation,
+      otherFixed:        costs.utilities + costs.communication + costs.otherFixed,
+      supplies:          costs.supplies,
+      marketing:         costs.marketing,
+      otherVariable:     costs.otherVariable,
+      isVat:             costs.isVat,
     });
     setSent(true);
     setTimeout(() => router.push("/"), 600);
@@ -82,150 +142,171 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-50">
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
+
+        {/* 헤더 */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-zinc-900">대시보드</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">이번달 경영 현황</p>
+            <p className="text-sm text-zinc-500 mt-0.5">월별 경영 현황 자동 집계</p>
           </div>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:border-blue-500"
-          />
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
+            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:border-blue-500" />
         </div>
 
-        {/* 회원 현황 */}
-        <section className="space-y-3">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">회원 현황</p>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard label="총 회원수" value={`${memberStats.count}명`} />
-            <StatCard label="총 결제금액" value={formatKRW(memberStats.totalPayment)} />
-            <StatCard label="실소진매출" value={formatKRW(actualRevenue)} sub={`소진률 ${Math.round(ratio * 100)}%`} />
-            <StatCard label="미소진 부채" value={formatKRW(unpaidLiability)} sub={`${memberStats.totalSessions - memberStats.conductedSessions}회 잔여`} />
+        {/* 연동 현황 요약 */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: "회원",     value: `${totalMembers}명`,  ok: totalMembers > 0 },
+            { label: "트레이너", value: `${trainerCount}명`,  ok: trainerCount > 0 },
+            { label: "완료수업", value: `${doneSessions}회`,  ok: doneSessions > 0 },
+            { label: "급여정산", value: `${settledCount}명`,  ok: hasSettlement },
+          ].map(({ label, value, ok }) => (
+            <div key={label} className={`rounded-xl border p-3 text-center ${ok ? "bg-white border-zinc-100" : "bg-zinc-50 border-zinc-100"}`}>
+              <p className="text-xs text-zinc-400 mb-0.5">{label}</p>
+              <p className={`text-base font-black ${ok ? "text-zinc-900" : "text-zinc-300"}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* 이번달 매출 */}
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">📊 이번달 매출</p>
+          <div className="bg-white rounded-2xl border border-zinc-100 p-4 divide-y divide-zinc-50">
+            <Row label="실소진매출" value={fmtW(actualRevenue)} sub={revenueSource} plus />
+            <Row label="완료 수업" value={`${doneSessions}회`} />
+            <Row label="총 결제금액 (누적)" value={fmtW(totalPaid)} />
+            <Row
+              label="잔여 수업 (미소진 부채)"
+              value={`${totalSessions - conductedTotal}회`}
+              sub={fmtW(totalPaid * (1 - allTimeRatio))}
+            />
+            {costs.isVat && <Row label="부가세 (10%)" value={`− ${fmtW(vat)}`} />}
           </div>
         </section>
 
-        {/* 비용 현황 */}
-        <section className="space-y-3">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">비용 현황</p>
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-2.5">
-            {[
-              { label: "세금 합계", value: vat + incomeTax },
-              { label: "고정비 합계 (4대보험 포함)", value: totalFixed },
-              { label: "변동비 합계", value: totalVariable },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex justify-between text-sm">
-                <span className="text-zinc-500">{label}</span>
-                <span className="font-semibold text-zinc-800">{formatKRW(value)}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 인건비 안전 진단 */}
-        {laborGrade && (
-          <section className="space-y-3">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">인건비 안전 진단</p>
-            <div className={`rounded-2xl border p-5 space-y-4 ${
-              laborGrade.color === "emerald" ? "bg-emerald-50 border-emerald-100" :
-              laborGrade.color === "yellow"  ? "bg-yellow-50 border-yellow-100" :
-                                               "bg-red-50 border-red-100"
-            }`}>
-              {/* 등급 & 비율 */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{laborGrade.icon}</span>
-                  <div>
-                    <p className={`font-black text-lg ${
-                      laborGrade.color === "emerald" ? "text-emerald-700" :
-                      laborGrade.color === "yellow"  ? "text-yellow-700" : "text-red-700"
-                    }`}>{laborGrade.label}</p>
-                    <p className="text-xs text-zinc-500">{laborGrade.desc}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`text-3xl font-black ${
-                    laborGrade.color === "emerald" ? "text-emerald-600" :
-                    laborGrade.color === "yellow"  ? "text-yellow-600" : "text-red-600"
-                  }`}>{laborRatio.toFixed(1)}%</p>
-                  <p className="text-xs text-zinc-400">인건비 / 실소진매출</p>
-                </div>
-              </div>
-
-              {/* 게이지 바 */}
-              <div>
-                <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                  <span>0%</span>
-                  <span className="text-emerald-600 font-semibold">30% 권장</span>
-                  <span className="text-yellow-600 font-semibold">40% 경고</span>
-                  <span>60%+</span>
-                </div>
-                <div className="relative h-3 bg-white rounded-full overflow-hidden border border-zinc-200">
-                  {/* 색상 구간 */}
-                  <div className="absolute inset-0 flex">
-                    <div className="bg-emerald-200" style={{ width: "50%" }} />
-                    <div className="bg-yellow-200" style={{ width: "16.7%" }} />
-                    <div className="bg-red-200" style={{ width: "33.3%" }} />
-                  </div>
-                  {/* 현재 위치 마커 */}
-                  <div
-                    className="absolute top-0 bottom-0 w-1 bg-zinc-800 rounded-full transition-all"
-                    style={{ left: `${Math.min(laborRatio / 60 * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* 세부 내역 */}
-              <div className="bg-white/70 rounded-xl p-3 space-y-1.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">정규직 인건비 (4대보험 포함)</span>
-                  <span className="font-semibold">{formatKRW(costs.trainerSalary + insurance)}</span>
-                </div>
-                {costs.freelanceSalary > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">프리랜서 인건비 (원천징수 포함)</span>
-                    <span className="font-semibold">{formatKRW(costs.freelanceSalary + freelanceTax)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-zinc-100 pt-1.5">
-                  <span className="text-zinc-500">인건비 합계</span>
-                  <span className="font-bold">{formatKRW(totalLaborCost)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-zinc-400">
-                  <span>업계 권장 기준 (실소진매출의 30~40%)</span>
-                  <span>{formatKRW(actualRevenue * 0.3)} ~ {formatKRW(actualRevenue * 0.4)}</span>
-                </div>
+        {/* 인건비 */}
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">💰 인건비</p>
+          <div className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-zinc-500">인건비 합계</span>
+              <div className="text-right">
+                <span className="font-bold text-zinc-900">{fmtW(effectiveSalaryCost)}</span>
+                <p className="text-xs text-zinc-400">{salarySource}</p>
               </div>
             </div>
-          </section>
-        )}
 
-        {/* 순이익 요약 */}
-        <section className="bg-zinc-900 rounded-2xl p-5 text-white space-y-2">
-          <p className="text-sm text-zinc-400">예상 순이익</p>
-          <p className={`text-4xl font-black ${netProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-            {formatKRW(netProfit)}
-          </p>
-          <p className="text-xs text-zinc-500">
-            실소진매출 기준 · 비용 관리 페이지에서 비용을 먼저 입력하세요
-          </p>
+            {hasSettlement && (
+              <div className="divide-y divide-zinc-50">
+                {monthSettlements.filter((s) => s.empType === "정규직").length > 0 && (
+                  <Row
+                    label={`정규직 ${monthSettlements.filter((s) => s.empType === "정규직").length}명 (4대보험+산재 포함)`}
+                    value={fmtW(monthSettlements.filter((s) => s.empType === "정규직").reduce((sum, s) => sum + s.companyCost, 0))}
+                  />
+                )}
+                {monthSettlements.filter((s) => s.empType === "프리랜서").length > 0 && (
+                  <Row
+                    label={`프리랜서 ${monthSettlements.filter((s) => s.empType === "프리랜서").length}명 (세전 기준)`}
+                    value={fmtW(monthSettlements.filter((s) => s.empType === "프리랜서").reduce((sum, s) => sum + s.companyCost, 0))}
+                  />
+                )}
+              </div>
+            )}
+
+            {!hasSettlement && (costs.trainerSalary > 0 || costs.freelanceSalary > 0) && (
+              <div className="divide-y divide-zinc-50">
+                {costs.trainerSalary > 0 && (
+                  <Row label="정규직 (4대보험+산재 10.65% 포함)" value={fmtW(costs.trainerSalary * (1 + INS_RATE))} />
+                )}
+                {costs.freelanceSalary > 0 && (
+                  <Row label="프리랜서 (세전)" value={fmtW(costs.freelanceSalary)} />
+                )}
+              </div>
+            )}
+
+            {!hasSettlement && effectiveSalaryCost === 0 && (
+              <p className="text-xs text-zinc-400 text-center py-1">급여 정산 완료 또는 비용 관리 입력 시 자동 반영</p>
+            )}
+
+            {laborGrade && (
+              <div className={`rounded-xl px-3 py-2 flex justify-between items-center text-sm font-semibold mt-1 ${
+                laborGrade.color === "emerald" ? "bg-emerald-50 text-emerald-700" :
+                laborGrade.color === "yellow"  ? "bg-yellow-50 text-yellow-700"  : "bg-red-50 text-red-700"
+              }`}>
+                <span>{laborGrade.icon} {laborGrade.label} — {laborGrade.desc}</span>
+                <span className="text-lg font-black">{laborRatio.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
         </section>
 
+        {/* 기타 비용 */}
+        <section className="space-y-2">
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">📋 기타 비용</p>
+          <div className="bg-white rounded-2xl border border-zinc-100 p-4 divide-y divide-zinc-50">
+            {costs.rent > 0        && <Row label="임대료"        value={fmtW(costs.rent)} />}
+            {(costs.utilities + costs.communication) > 0 && (
+              <Row label="공과금·통신비" value={fmtW(costs.utilities + costs.communication)} />
+            )}
+            {costs.depreciation > 0 && <Row label="감가상각" value={fmtW(costs.depreciation)} />}
+            {costs.otherFixed > 0   && <Row label="기타 고정비" value={fmtW(costs.otherFixed)} />}
+            {(costs.supplies + costs.marketing + costs.otherVariable) > 0 && (
+              <Row label="변동비 합계" value={fmtW(costs.supplies + costs.marketing + costs.otherVariable)} />
+            )}
+            {otherFixed + totalVariable === 0 && (
+              <p className="text-xs text-zinc-400 text-center py-2">비용 관리에서 입력하면 자동 반영됩니다</p>
+            )}
+          </div>
+        </section>
+
+        {/* 순이익 */}
+        <div className="bg-zinc-900 rounded-2xl p-5 text-white space-y-3">
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between text-zinc-300">
+              <span>실소진매출</span><span className="font-semibold">{fmtW(actualRevenue)}</span>
+            </div>
+            <div className="flex justify-between text-zinc-400">
+              <span>인건비</span><span>− {fmtW(effectiveSalaryCost)}</span>
+            </div>
+            {otherFixed > 0 && (
+              <div className="flex justify-between text-zinc-400">
+                <span>기타 고정비</span><span>− {fmtW(otherFixed)}</span>
+              </div>
+            )}
+            {totalVariable > 0 && (
+              <div className="flex justify-between text-zinc-400">
+                <span>변동비</span><span>− {fmtW(totalVariable)}</span>
+              </div>
+            )}
+            {vat > 0 && (
+              <div className="flex justify-between text-zinc-400">
+                <span>부가세</span><span>− {fmtW(vat)}</span>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-zinc-700 pt-3">
+            <p className="text-sm text-zinc-400 mb-1">예상 순이익</p>
+            <p className={`text-4xl font-black ${netProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {fmtW(netProfit)}
+            </p>
+          </div>
+        </div>
+
+        {/* 자동 연동 현황 */}
+        <div className="bg-blue-50 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
+          <p className="font-bold text-blue-800">🔗 자동 연동 현황</p>
+          <p>✅ 회원 관리 → 수업 관리 (패키지 자동 생성)</p>
+          <p>✅ 수업 스케줄 완료 → 수업 관리 (진행 회차 자동 업데이트)</p>
+          <p>✅ 급여 정산 완료 → 비용 관리 (급여 자동 반영)</p>
+          <p>✅ 비용 관리 → 손익분기점 (자동 계산)</p>
+          <p>✅ 전체 데이터 → 대시보드 → 계산기 (자동 집계)</p>
+        </div>
+
         {/* 계산기로 보내기 */}
-        <button
-          onClick={handleSendToCalc}
-          disabled={sent}
-          className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white hover:bg-blue-700 disabled:bg-blue-400 transition text-base"
-        >
+        <button onClick={handleSendToCalc} disabled={sent}
+          className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white hover:bg-blue-700 disabled:bg-blue-400 transition text-base">
           {sent ? "✓ 계산기로 이동 중..." : "📊 계산기로 보내서 상세 확인하기"}
         </button>
-
-        {memberStats.count === 0 && (
-          <p className="text-center text-xs text-zinc-400">
-            회원 관리 페이지에서 회원을 먼저 등록하세요
-          </p>
-        )}
       </div>
     </div>
   );
