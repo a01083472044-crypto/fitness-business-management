@@ -124,17 +124,21 @@ export default function AdminPage() {
     <div className="min-h-screen bg-zinc-50">
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-zinc-900">계정 관리</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">지점별 로그인 계정 관리</p>
-          </div>
-          <button
-            onClick={() => { setShowForm(true); setMsg(""); }}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
-          >
-            + 계정 추가
-          </button>
+        <div>
+          <h1 className="text-2xl font-black text-zinc-900">계정 관리</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">지점별 로그인 계정 관리</p>
+        </div>
+
+        {/* 안내 배너 */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-4 text-sm text-blue-700 space-y-2">
+          <p className="font-bold">📌 지점 계정 추가 방법</p>
+          <p>1. 지점 담당자가 <strong>/signup</strong> 에서 직접 회원가입</p>
+          <p>2. 아래 목록에서 <strong>[승인]</strong> 버튼 클릭 → 지점 배정</p>
+          <p>3. 담당자가 로그인하면 해당 지점 데이터만 표시됩니다</p>
+          <a href="/signup" target="_blank"
+            className="inline-block mt-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition">
+            회원가입 페이지 열기 →
+          </a>
         </div>
 
         {msg && (
