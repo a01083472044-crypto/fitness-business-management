@@ -104,6 +104,19 @@ export default function AdminPage() {
     loadUsers();
   };
 
+  const handleApprove = async (u: UserProfile) => {
+    if (!supabase) return;
+    const approvedBranch = prompt(`"${u.full_name || u.email}" 계정에 배정할 지점명을 입력하세요:\n(관리자로 승인하려면 ADMIN 입력)`, "");
+    if (approvedBranch === null) return;
+    const isApproveAdmin = approvedBranch.trim().toUpperCase() === "ADMIN";
+    await supabase.from("user_profiles").update({
+      branch: isApproveAdmin ? "" : approvedBranch.trim(),
+      role:   isApproveAdmin ? "superadmin" : "branch",
+    }).eq("id", u.id);
+    setMsg(`✅ "${u.full_name || u.email}" 계정이 승인됐습니다.`);
+    loadUsers();
+  };
+
   if (loading) return null;
   if (!isAdmin) return null;
 
@@ -146,29 +159,41 @@ export default function AdminPage() {
             </div>
           )}
           {users.map((u) => (
-            <div key={u.id} className="bg-white rounded-2xl border border-zinc-100 p-4">
+            <div key={u.id} className={`bg-white rounded-2xl border p-4 ${
+              u.role === "pending" ? "border-amber-200 bg-amber-50" : "border-zinc-100"
+            }`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-bold text-zinc-900">{u.full_name || u.email}</p>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      u.role === "superadmin"
-                        ? "bg-blue-50 text-blue-600"
-                        : "bg-emerald-50 text-emerald-600"
+                      u.role === "superadmin" ? "bg-blue-50 text-blue-600"
+                      : u.role === "pending"  ? "bg-amber-100 text-amber-700"
+                      : "bg-emerald-50 text-emerald-600"
                     }`}>
-                      {u.role === "superadmin" ? "관리자" : "지점"}
+                      {u.role === "superadmin" ? "관리자" : u.role === "pending" ? "⏳ 승인대기" : "지점"}
                     </span>
                   </div>
                   <p className="text-xs text-zinc-400 mt-0.5">{u.email}</p>
                   {u.branch && <p className="text-xs text-zinc-500 mt-0.5">📍 {u.branch}</p>}
                   {u.gym_code && <p className="text-xs text-zinc-400 mt-0.5">🔑 {u.gym_code}</p>}
                 </div>
-                <button
-                  onClick={() => handleDelete(u.id, u.email)}
-                  className="text-xs text-zinc-400 hover:text-red-500 transition"
-                >
-                  삭제
-                </button>
+                <div className="flex gap-2 items-center">
+                  {u.role === "pending" && (
+                    <button
+                      onClick={() => handleApprove(u)}
+                      className="text-xs text-emerald-600 font-semibold hover:text-emerald-800 transition bg-emerald-50 px-2 py-1 rounded-lg"
+                    >
+                      승인
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(u.id, u.email)}
+                    className="text-xs text-zinc-400 hover:text-red-500 transition"
+                  >
+                    삭제
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signIn, getSession } from "../lib/auth";
 
 export default function LoginPage() {
@@ -102,8 +103,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-zinc-400 mt-6">
-          계정이 없으신가요? 관리자에게 문의하세요.
+        <p className="text-center text-sm text-zinc-500 mt-5">
+          계정이 없으신가요?{" "}
+          <Link href="/signup" className="text-blue-600 font-semibold hover:underline">회원가입</Link>
         </p>
       </div>
     </div>
