@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getMembers, saveMembers, getTrainers, syncMemberTotals, Member, SessionPackage, Trainer, formatManwon } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, Member, SessionPackage, Trainer, formatManwon } from "../lib/store";
 
 function parseKorean(input: string): number {
   if (!input) return 0;
@@ -43,6 +43,8 @@ export default function MembersPage() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [savedBranches, setSavedBranches] = useState<string[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState("전체");
   const [form, setForm] = useState<Member>(empty());
   const [paymentInput, setPaymentInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -50,8 +52,25 @@ export default function MembersPage() {
 
   useEffect(() => {
     setMembers(getMembers());
-    setTrainers(getTrainers().filter((t) => t.status === "재직"));
+    const ts = getTrainers().filter((t) => t.status === "재직");
+    setTrainers(ts);
+    setSavedBranches(getBranches());
   }, []);
+
+  // 트레이너 → 지점 매핑
+  const trainerBranchMap = Object.fromEntries(trainers.map((t) => [t.name, t.branch || ""]));
+
+  // 지점 목록 (저장된 지점 + 트레이너 지점 합산)
+  const branches = (() => {
+    const fromTrainers = trainers.map((t) => t.branch).filter(Boolean);
+    const merged = Array.from(new Set([...savedBranches, ...fromTrainers]));
+    return ["전체", ...merged];
+  })();
+
+  // 지점 필터 적용된 회원 목록
+  const filteredMembers = selectedBranch === "전체"
+    ? members
+    : members.filter((m) => trainerBranchMap[m.trainer] === selectedBranch);
 
   // 트레이너 선택 시 고용형태 자동 반영
   const handleTrainerSelect = (name: string) => {
@@ -124,9 +143,9 @@ export default function MembersPage() {
     setShowForm(false);
   };
 
-  const totalPayment = members.reduce((s, m) => s + m.totalPayment, 0);
-  const totalSessions = members.reduce((s, m) => s + m.totalSessions, 0);
-  const conductedSessions = members.reduce((s, m) => s + m.conductedSessions, 0);
+  const totalPayment = filteredMembers.reduce((s, m) => s + m.totalPayment, 0);
+  const totalSessions = filteredMembers.reduce((s, m) => s + m.totalSessions, 0);
+  const conductedSessions = filteredMembers.reduce((s, m) => s + m.conductedSessions, 0);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -144,6 +163,30 @@ export default function MembersPage() {
           </button>
         </div>
 
+        {/* 지점 탭 */}
+        {branches.length > 1 && (
+          <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl overflow-x-auto scrollbar-hide">
+            {branches.map((branch) => (
+              <button
+                key={branch}
+                onClick={() => setSelectedBranch(branch)}
+                className={`flex-shrink-0 flex-1 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                  selectedBranch === branch
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-600"
+                }`}
+              >
+                {branch}
+                <span className="ml-1 text-xs font-normal opacity-60">
+                  ({branch === "전체"
+                    ? members.length
+                    : members.filter((m) => trainerBranchMap[m.trainer] === branch).length})
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 요약 */}
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -159,17 +202,28 @@ export default function MembersPage() {
         </div>
 
         {/* 회원 목록 */}
-        {members.length === 0 ? (
+        {filteredMembers.length === 0 ? (
           <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
-            등록된 회원이 없습니다.<br />회원을 추가해주세요.
+            {selectedBranch === "전체"
+              ? <>등록된 회원이 없습니다.<br />회원을 추가해주세요.</>
+              : <><strong>{selectedBranch}</strong>에 등록된 회원이 없습니다.</>}
           </div>
         ) : (
           <div className="space-y-3">
-            {members.map((m) => (
+            {filteredMembers.map((m) => {
+              const memberBranch = trainerBranchMap[m.trainer];
+              return (
               <div key={m.id} className="bg-white rounded-2xl border border-zinc-100 p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="font-bold text-zinc-900">{m.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-zinc-900">{m.name}</p>
+                      {memberBranch && selectedBranch === "전체" && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">
+                          📍 {memberBranch}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <p className="text-xs text-zinc-400">{m.trainer || "트레이너 미지정"}</p>
                       {m.trainerType && (
@@ -245,7 +299,8 @@ export default function MembersPage() {
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
