@@ -113,7 +113,7 @@ export default function CostsPage() {
         <section className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
           <p className="font-bold text-zinc-900">고정비</p>
           <NumField label="임차료 (월세)" value={costs.rent} onChange={(v) => update("rent", v)} />
-          <NumField label="정규직 인건비 합계" value={costs.trainerSalary} onChange={(v) => update("trainerSalary", v)} hint="4대보험(9%)은 자동 계산됩니다" />
+          <NumField label="정규직 인건비 합계" value={costs.trainerSalary} onChange={(v) => update("trainerSalary", v)} hint="4대보험(10.65%)은 자동 계산됩니다" />
           <NumField label="프리랜서 인건비 합계" value={costs.freelanceSalary} onChange={(v) => update("freelanceSalary", v)} hint="원천징수(3.3%)는 자동 계산됩니다" />
           <NumField label="공과금" value={costs.utilities} onChange={(v) => update("utilities", v)} />
           <NumField label="통신비" value={costs.communication} onChange={(v) => update("communication", v)} />
