@@ -2,7 +2,7 @@
 
 import { useState, useEffect, ChangeEvent } from "react";
 import React from "react";
-import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts } from "../lib/store";
+import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts, getBranches } from "../lib/store";
 
 function formatKRW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
@@ -64,13 +64,19 @@ export default function CostsPage() {
   const [month, setMonth] = useState(currentMonth());
   const [costs, setCosts] = useState<MonthlyCosts>(emptyCosts(currentMonth()));
   const [saved, setSaved] = useState(false);
+  const [branches, setBranches] = useState<string[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("");
+
+  useEffect(() => {
+    setBranches(getBranches());
+  }, []);
 
   useEffect(() => {
     const all = getCosts();
-    const found = all.find((c) => c.month === month);
-    setCosts(found ?? emptyCosts(month));
+    const found = all.find((c) => c.month === month && (c.branch ?? "") === selectedBranch);
+    setCosts(found ?? emptyCosts(month, selectedBranch));
     setSaved(false);
-  }, [month]);
+  }, [month, selectedBranch]);
 
   const update = <K extends keyof MonthlyCosts>(key: K, val: MonthlyCosts[K]) => {
     setCosts((prev) => ({ ...prev, [key]: val }));
@@ -79,7 +85,7 @@ export default function CostsPage() {
 
   const handleSave = () => {
     const all = getCosts();
-    const idx = all.findIndex((c) => c.month === month);
+    const idx = all.findIndex((c) => c.month === month && (c.branch ?? "") === selectedBranch);
     if (idx >= 0) all[idx] = costs;
     else all.push(costs);
     saveCosts(all);
@@ -108,6 +114,25 @@ export default function CostsPage() {
             className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:border-blue-500"
           />
         </div>
+
+        {/* 지점 탭 */}
+        {branches.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {[{ label: "전체", value: "" }, ...branches.map((b) => ({ label: b, value: b }))].map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setSelectedBranch(value)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition ${
+                  selectedBranch === value
+                    ? "bg-blue-600 text-white"
+                    : "bg-white border border-zinc-200 text-zinc-500"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 고정비 */}
         <section className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">

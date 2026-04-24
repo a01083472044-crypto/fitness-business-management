@@ -86,6 +86,7 @@ export function syncMemberTotals(m: Member): Member {
 // ── 월별 비용 ──────────────────────────────────────────────────────────────
 export interface MonthlyCosts {
   month: string;
+  branch: string;   // "" = 전체(공통), 지점명 = 지점별
   rent: number;
   managementFee: number; // 관리비
   trainerSalary: number;
@@ -261,9 +262,9 @@ export function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function emptyCosts(month: string): MonthlyCosts {
+export function emptyCosts(month: string, branch = ""): MonthlyCosts {
   return {
-    month, rent: 0, managementFee: 0, trainerSalary: 0, freelanceSalary: 0,
+    month, branch, rent: 0, managementFee: 0, trainerSalary: 0, freelanceSalary: 0,
     utilities: 0, communication: 0, depreciation: 0, otherFixed: 0,
     supplies: 0, marketing: 0, parkingFee: 0, paymentFee: 0, otherVariable: 0, isVat: false,
   };
@@ -276,9 +277,9 @@ export function syncPaymentFeeToCosts(members: Member[], month: string) {
     .reduce((s, p) => s + (p.paymentFee ?? 0), 0);
 
   const allCosts = getCosts();
-  const existing = allCosts.find((c) => c.month === month) ?? emptyCosts(month);
+  const existing = allCosts.find((c) => c.month === month && (c.branch ?? "") === "") ?? emptyCosts(month, "");
   const updated  = { ...existing, paymentFee: totalFee };
-  saveCosts([...allCosts.filter((c) => c.month !== month), updated]);
+  saveCosts([...allCosts.filter((c) => !(c.month === month && (c.branch ?? "") === "")), updated]);
 }
 
 export function formatManwon(n: number): string | null {

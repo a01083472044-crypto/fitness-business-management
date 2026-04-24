@@ -70,9 +70,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const all = getCosts();
-    setCosts(all.find((c) => c.month === month) ?? emptyCosts(month));
+    const branchKey = selectedBranch === "전체" ? "" : selectedBranch;
+    // 지점별 비용 우선 조회, 없으면 전체(공통) 비용 사용
+    const branchCosts = all.find((c) => c.month === month && (c.branch ?? "") === branchKey);
+    const globalCosts = all.find((c) => c.month === month && (c.branch ?? "") === "");
+    setCosts(branchCosts ?? globalCosts ?? emptyCosts(month));
     setSent(false);
-  }, [month]);
+  }, [month, selectedBranch]);
 
   // ── 지점 필터 ─────────────────────────────────────────────────────────────
   const branches = useMemo(() => {
