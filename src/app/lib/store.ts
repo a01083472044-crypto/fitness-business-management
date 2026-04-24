@@ -16,6 +16,21 @@ export interface ScheduleEntry {
   done: boolean;       // 완료 여부
 }
 
+// ── 결제 수단 ──────────────────────────────────────────────────────────────
+export type PaymentMethod = "카드" | "현금" | "지역화폐" | "";
+
+// 결제 수단별 수수료율 (%)
+export const PAYMENT_FEE_RATES: Record<string, number> = {
+  "카드":    2.0,  // 카드 수수료 2.0%
+  "현금":    0,    // 현금 수수료 없음
+  "지역화폐": 0,   // 지역화폐 가맹점 수수료 0%
+};
+
+export function calcPaymentFee(amount: number, method: PaymentMethod): number {
+  if (!method) return 0;
+  return Math.round(amount * (PAYMENT_FEE_RATES[method] ?? 0) / 100);
+}
+
 // ── PT 패키지 ──────────────────────────────────────────────────────────────
 export interface SessionPackage {
   id: string;
@@ -24,7 +39,10 @@ export interface SessionPackage {
   trainerType: "정규직" | "프리랜서" | "";
   totalSessions: number;     // 결제 회차
   conductedSessions: number; // 진행 회차
-  paymentAmount: number;     // 결제 금액
+  paymentAmount: number;     // 결제 금액 (원래 결제액)
+  paymentMethod: PaymentMethod; // 결제 수단
+  paymentFee: number;        // 수수료 금액
+  netAmount: number;         // 실수령액 (paymentAmount - paymentFee)
   registeredAt: string;      // YYYY-MM-DD
 }
 
@@ -65,6 +83,7 @@ export interface MonthlyCosts {
   otherFixed: number;
   supplies: number;
   marketing: number;
+  paymentFee: number;    // 결제 수수료 (카드 등)
   otherVariable: number;
   isVat: boolean;
 }
@@ -232,8 +251,20 @@ export function emptyCosts(month: string): MonthlyCosts {
   return {
     month, rent: 0, trainerSalary: 0, freelanceSalary: 0,
     utilities: 0, communication: 0, depreciation: 0, otherFixed: 0,
-    supplies: 0, marketing: 0, otherVariable: 0, isVat: false,
+    supplies: 0, marketing: 0, paymentFee: 0, otherVariable: 0, isVat: false,
   };
+}
+
+/** 전체 회원 패키지에서 결제 수수료 합산 → 해당 월 비용에 반영 */
+export function syncPaymentFeeToCosts(members: Member[], month: string) {
+  const totalFee = members.flatMap((m) => m.packages ?? [])
+    .filter((p) => p.registeredAt?.slice(0, 7) === month)
+    .reduce((s, p) => s + (p.paymentFee ?? 0), 0);
+
+  const allCosts = getCosts();
+  const existing = allCosts.find((c) => c.month === month) ?? emptyCosts(month);
+  const updated  = { ...existing, paymentFee: totalFee };
+  saveCosts([...allCosts.filter((c) => c.month !== month), updated]);
 }
 
 export function formatManwon(n: number): string | null {

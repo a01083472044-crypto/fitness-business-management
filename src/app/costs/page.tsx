@@ -88,10 +88,10 @@ export default function CostsPage() {
 
   const totalFixed =
     costs.rent +
-    costs.trainerSalary + costs.trainerSalary * 0.09 +
+    costs.trainerSalary + costs.trainerSalary * 0.1065 +
     costs.freelanceSalary + costs.freelanceSalary * 0.033 +
     costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
-  const totalVariable = costs.supplies + costs.marketing + costs.otherVariable;
+  const totalVariable = costs.supplies + costs.marketing + (costs.paymentFee ?? 0) + costs.otherVariable;
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -130,6 +130,15 @@ export default function CostsPage() {
           <p className="font-bold text-zinc-900">변동비</p>
           <NumField label="소모품비" value={costs.supplies} onChange={(v) => update("supplies", v)} />
           <NumField label="마케팅 / 광고비" value={costs.marketing} onChange={(v) => update("marketing", v)} />
+          <div>
+            <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
+              💳 결제 수수료 <span className="text-blue-500 font-normal">(회원 등록 시 자동 반영)</span>
+            </label>
+            <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 flex justify-between text-sm">
+              <span className="text-blue-600">카드 수수료 자동 합산</span>
+              <span className="font-bold text-blue-700">{formatKRW(costs.paymentFee ?? 0)}</span>
+            </div>
+          </div>
           <NumField label="기타 변동비" value={costs.otherVariable} onChange={(v) => update("otherVariable", v)} />
           <div className="rounded-xl bg-zinc-50 px-4 py-3 flex justify-between text-sm">
             <span className="text-zinc-500">변동비 합계</span>

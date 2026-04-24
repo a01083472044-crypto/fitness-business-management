@@ -102,7 +102,8 @@ export default function DashboardPage() {
 
   const vat           = costs.isVat ? actualRevenue * 0.1 : 0;
   const otherFixed    = costs.rent + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
-  const totalVariable = costs.supplies + costs.marketing + costs.otherVariable;
+  const paymentFee    = costs.paymentFee ?? 0;
+  const totalVariable = costs.supplies + costs.marketing + paymentFee + costs.otherVariable;
   const netProfit     = actualRevenue - vat - effectiveSalaryCost - otherFixed - totalVariable;
 
   // ── 인건비 진단 ───────────────────────────────────────────────────────────
@@ -132,7 +133,7 @@ export default function DashboardPage() {
       otherFixed:        costs.utilities + costs.communication + costs.otherFixed,
       supplies:          costs.supplies,
       marketing:         costs.marketing,
-      otherVariable:     costs.otherVariable,
+      otherVariable:     paymentFee + costs.otherVariable,
       isVat:             costs.isVat,
     });
     setSent(true);

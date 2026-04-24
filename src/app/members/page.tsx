@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, Member, SessionPackage, Trainer, formatManwon } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, syncPaymentFeeToCosts, calcPaymentFee, PAYMENT_FEE_RATES, Member, SessionPackage, Trainer, PaymentMethod, formatManwon } from "../lib/store";
 
 function parseKorean(input: string): number {
   if (!input) return 0;
@@ -47,6 +47,7 @@ export default function MembersPage() {
   const [selectedBranch, setSelectedBranch] = useState("전체");
   const [form, setForm] = useState<Member>(empty());
   const [paymentInput, setPaymentInput] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -90,6 +91,7 @@ export default function MembersPage() {
   const openAdd = () => {
     setForm(empty());
     setPaymentInput("");
+    setPaymentMethod("");
     setEditingId(null);
     setShowForm(true);
   };
@@ -97,6 +99,8 @@ export default function MembersPage() {
   const openEdit = (m: Member) => {
     setForm({ ...m });
     setPaymentInput(String(m.totalPayment || ""));
+    // 첫 번째 패키지의 결제 수단 불러오기
+    setPaymentMethod((m.packages?.[0]?.paymentMethod) ?? "");
     setEditingId(m.id);
     setShowForm(true);
   };
@@ -107,6 +111,10 @@ export default function MembersPage() {
     }
   };
 
+  // 수수료 계산
+  const fee    = calcPaymentFee(form.totalPayment, paymentMethod);
+  const netAmt = form.totalPayment - fee;
+
   // 회원 저장 시 수업 관리 자동 연동
   const buildAutoPackage = (m: Member): SessionPackage => ({
     id: crypto.randomUUID(),
@@ -116,6 +124,9 @@ export default function MembersPage() {
     totalSessions: m.totalSessions,
     conductedSessions: m.conductedSessions,
     paymentAmount: m.totalPayment,
+    paymentMethod,
+    paymentFee: fee,
+    netAmount: netAmt,
     registeredAt: new Date().toISOString().slice(0, 10),
   });
 
@@ -123,23 +134,28 @@ export default function MembersPage() {
     if (!form.name.trim()) return;
     const hasSessionData = form.totalSessions > 0 || form.totalPayment > 0;
 
+    let finalMembers: Member[];
     if (editingId) {
-      // 수정: 기존 패키지 없고 회차/금액 있으면 자동 생성
       const existing = members.find((m) => m.id === editingId);
       const existingPkgs = existing?.packages ?? [];
       let updated = { ...form };
       if (existingPkgs.length === 0 && hasSessionData) {
         updated = syncMemberTotals({ ...updated, packages: [buildAutoPackage(form)] });
       }
-      persist(members.map((m) => (m.id === editingId ? updated : m)));
+      finalMembers = members.map((m) => (m.id === editingId ? updated : m));
     } else {
-      // 신규: 회차/금액 있으면 자동 패키지 생성
       let newMember = { ...form, id: crypto.randomUUID() };
       if (hasSessionData) {
         newMember = syncMemberTotals({ ...newMember, packages: [buildAutoPackage(newMember)] });
       }
-      persist([...members, newMember]);
+      finalMembers = [...members, newMember];
     }
+    persist(finalMembers);
+
+    // 결제 수수료 → 비용 관리 자동 반영
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    syncPaymentFeeToCosts(finalMembers, thisMonth);
+
     setShowForm(false);
   };
 
@@ -381,6 +397,28 @@ export default function MembersPage() {
                 </p>
               )}
             </Field>
+            {/* 결제 수단 */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 mb-2">결제 수단</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["카드", "현금", "지역화폐"] as PaymentMethod[]).map((m) => (
+                  <button key={m} type="button"
+                    onClick={() => setPaymentMethod(paymentMethod === m ? "" : m)}
+                    className={`py-2.5 rounded-xl text-sm font-semibold border transition ${
+                      paymentMethod === m
+                        ? m === "카드"    ? "bg-blue-600 text-white border-blue-600"
+                        : m === "현금"   ? "bg-emerald-500 text-white border-emerald-500"
+                        : "bg-purple-500 text-white border-purple-500"
+                        : "bg-white text-zinc-500 border-zinc-200"
+                    }`}>
+                    {m === "카드" ? `💳 카드 (${PAYMENT_FEE_RATES["카드"]}%)`
+                     : m === "현금" ? "💵 현금"
+                     : "🏷️ 지역화폐"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Field label="총 결제금액">
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
@@ -397,7 +435,17 @@ export default function MembersPage() {
                 />
               </div>
               {form.totalPayment > 0 && (
-                <p className="mt-1 text-xs font-medium text-blue-500">→ {form.totalPayment.toLocaleString("ko-KR")}원</p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs font-medium text-blue-500">결제액: {form.totalPayment.toLocaleString()}원</p>
+                  {fee > 0 && (
+                    <p className="text-xs font-medium text-red-400">
+                      수수료 ({PAYMENT_FEE_RATES[paymentMethod!]}%): -{fee.toLocaleString()}원
+                    </p>
+                  )}
+                  <p className={`text-sm font-bold ${fee > 0 ? "text-emerald-600" : "text-blue-600"}`}>
+                    실수령액: {netAmt.toLocaleString()}원
+                  </p>
+                </div>
               )}
             </Field>
             <div className="grid grid-cols-2 gap-3">

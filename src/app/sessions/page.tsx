@@ -214,6 +214,11 @@ export default function SessionsPage() {
   // 저장
   const handleSubmit = () => {
     if (!selMemberId || !pkgName.trim()) return;
+    const paymentAmount = parseKorean(paymentInput);
+    // editing 시 기존 패키지의 결제 수단/수수료 정보 보존
+    const existingPkg = editing
+      ? members.find((m) => m.id === selMemberId)?.packages?.find((p) => p.id === editing.pkgId)
+      : undefined;
     const pkg: SessionPackage = {
       id: editing?.pkgId ?? crypto.randomUUID(),
       name: pkgName.trim(),
@@ -221,7 +226,10 @@ export default function SessionsPage() {
       trainerType,
       totalSessions: Number(totalSessions) || 0,
       conductedSessions: Number(conductedSessions) || 0,
-      paymentAmount: parseKorean(paymentInput),
+      paymentAmount,
+      paymentMethod: existingPkg?.paymentMethod ?? "",
+      paymentFee: existingPkg?.paymentFee ?? 0,
+      netAmount: paymentAmount - (existingPkg?.paymentFee ?? 0),
       registeredAt,
     };
     const updated = members.map((m) => {

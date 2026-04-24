@@ -65,6 +65,7 @@ export default function BepPage() {
   // 변동비
   const [supplies, setSupplies] = useState("");
   const [marketing, setMarketing] = useState("");
+  const [paymentFee, setPaymentFee] = useState(0);
   const [otherVariable, setOtherVariable] = useState("");
 
   // 세금
@@ -85,6 +86,7 @@ export default function BepPage() {
       setOtherFixed(found.otherFixed > 0 ? String(found.otherFixed) : "");
       setSupplies(found.supplies > 0 ? String(found.supplies) : "");
       setMarketing(found.marketing > 0 ? String(found.marketing) : "");
+      setPaymentFee(found.paymentFee ?? 0);
       setOtherVariable(found.otherVariable > 0 ? String(found.otherVariable) : "");
       setIsVat(found.isVat);
       setLinked(true);
@@ -95,7 +97,7 @@ export default function BepPage() {
 
   const fixedCost =
     parseKorean(rent) +
-    parseKorean(salary) * 1.09 +
+    parseKorean(salary) * 1.1065 +
     parseKorean(freelance) * 1.033 +
     parseKorean(utilities) +
     parseKorean(depreciation) +
@@ -104,6 +106,7 @@ export default function BepPage() {
   const variableCost =
     parseKorean(supplies) +
     parseKorean(marketing) +
+    paymentFee +
     parseKorean(otherVariable);
 
   const totalMonthlyCost = fixedCost + variableCost;
@@ -155,7 +158,7 @@ export default function BepPage() {
           <p className="font-bold text-zinc-900">월 고정비</p>
           <NumInput label="임차료 (월세)" value={rent} onChange={setRent} linked={linked && parseKorean(rent) > 0} />
           <NumInput label="정규직 인건비 합계 (세전)" value={salary} onChange={setSalary}
-            hint="4대보험(9%)은 자동 추가됩니다" linked={linked && parseKorean(salary) > 0} />
+            hint="4대보험(10.65%)은 자동 추가됩니다" linked={linked && parseKorean(salary) > 0} />
           <NumInput label="프리랜서 인건비 합계 (세전)" value={freelance} onChange={setFreelance}
             hint="원천징수(3.3%)는 자동 추가됩니다" linked={linked && parseKorean(freelance) > 0} />
           <NumInput label="공과금 · 통신비" value={utilities} onChange={setUtilities} linked={linked && parseKorean(utilities) > 0} />
@@ -174,6 +177,16 @@ export default function BepPage() {
           <p className="font-bold text-zinc-900">월 변동비</p>
           <NumInput label="소모품비" value={supplies} onChange={setSupplies} linked={linked && parseKorean(supplies) > 0} />
           <NumInput label="마케팅 / 광고비" value={marketing} onChange={setMarketing} linked={linked && parseKorean(marketing) > 0} />
+          <div>
+            <label className="block text-xs font-semibold text-zinc-500 mb-1.5 flex items-center gap-1.5">
+              💳 결제 수수료
+              <span className="text-blue-400 text-xs font-normal">· 회원 등록 시 자동 반영</span>
+            </label>
+            <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 flex justify-between text-sm">
+              <span className="text-blue-600">카드 수수료 자동 합산</span>
+              <span className="font-bold text-blue-700">₩{paymentFee.toLocaleString("ko-KR")}</span>
+            </div>
+          </div>
           <NumInput label="기타 변동비" value={otherVariable} onChange={setOtherVariable} linked={linked && parseKorean(otherVariable) > 0} />
           {variableCost > 0 && (
             <div className="rounded-xl bg-zinc-50 px-4 py-3 flex justify-between text-sm">
