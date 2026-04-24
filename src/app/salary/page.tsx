@@ -306,8 +306,8 @@ function IndividualCalc() {
           </div>
         )}
 
-        {/* 기본급 (base+rate, base+fixed) */}
-        {(role !== "trainer" || salaryType === "base+rate" || salaryType === "base+fixed") && (
+        {/* 기본급 (front: 항상, trainer: base+rate / base+fixed 구조만) */}
+        {(role === "front" || (role === "trainer" && (salaryType === "base+rate" || salaryType === "base+fixed"))) && (
           <NumInput
             label={role === "trainer" ? (salaryType === "base+fixed" ? "기본급 (월)" : "기본지원금 (월)") : "고정급 (월)"}
             value={baseSalary}
@@ -376,9 +376,13 @@ function IndividualCalc() {
               </div>
             </div>
 
-            {/* 기본급 (fixed, base+rate, base+fixed) */}
+            {/* 고정급 / 기본급 (fixed, base+rate, base+fixed) */}
             {mgrSalaryType !== "rate" && (
-              <NumInput label="기본급 (월)" value={baseSalary} onChange={setBase} />
+              <NumInput
+                label={mgrSalaryType === "fixed" ? "고정급 (월)" : "기본급 (월)"}
+                value={baseSalary}
+                onChange={setBase}
+              />
             )}
 
             {/* 배분율 구조 */}
@@ -431,7 +435,8 @@ function IndividualCalc() {
                (role !== "manager" || mgrSalaryType !== "rate") && (
                 <div className="flex justify-between">
                   <span className="text-zinc-500">
-                    {role === "trainer" && salaryType !== "base+fixed" ? "기본지원금" : "기본급"}
+                    {role === "trainer" && salaryType !== "base+fixed" ? "기본지원금" :
+                     role === "manager" && mgrSalaryType === "fixed" ? "고정급" : "기본급"}
                   </span>
                   <span className="font-semibold text-zinc-800">{formatKRW(base)}</span>
                 </div>
@@ -495,7 +500,7 @@ function IndividualCalc() {
               <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
                 {mgrSalaryType !== "rate" && (
                   <div className="flex justify-between text-zinc-300">
-                    <span>기본급</span>
+                    <span>{mgrSalaryType === "fixed" ? "고정급" : "기본급"}</span>
                     <span>{formatKRW(base)}</span>
                   </div>
                 )}
