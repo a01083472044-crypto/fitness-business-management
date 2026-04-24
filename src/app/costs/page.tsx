@@ -2,7 +2,7 @@
 
 import { useState, useEffect, ChangeEvent } from "react";
 import React from "react";
-import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts, getBranches } from "../lib/store";
+import { getCosts, saveCosts, emptyCosts, currentMonth, MonthlyCosts, getBranches, getTrainers } from "../lib/store";
 
 function formatKRW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
@@ -68,7 +68,12 @@ export default function CostsPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>("");
 
   useEffect(() => {
-    setBranches(getBranches());
+    const saved = getBranches();
+    const trainerBranches = getTrainers()
+      .map((t) => t.branch)
+      .filter(Boolean);
+    const merged = Array.from(new Set([...saved, ...trainerBranches]));
+    setBranches(merged);
   }, []);
 
   useEffect(() => {
