@@ -321,9 +321,17 @@ function IndividualCalc() {
           <>
             <NumInput label="이 트레이너의 이번달 PT 매출" value={ptRevenue} onChange={setPt} />
             <div>
-              <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
-                매출 배분율: <span className="text-blue-600 font-bold">{commRate}%</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-zinc-500">매출 배분율</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number" min="1" max="100" value={commRate}
+                    onChange={(e) => setComm(e.target.value)}
+                    className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-blue-600 text-center focus:outline-none focus:border-blue-500"
+                  />
+                  <span className="text-sm font-bold text-blue-600">%</span>
+                </div>
+              </div>
               <input type="range" min="30" max="70" value={commRate}
                 onChange={(e) => setComm(e.target.value)}
                 className="w-full accent-blue-600" />
@@ -390,9 +398,17 @@ function IndividualCalc() {
               <>
                 <NumInput label="이번달 매출 (센터 전체 또는 담당)" value={mgrRevenue} onChange={setMgrRevenue} />
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
-                    매출 배분율: <span className="text-amber-600 font-bold">{mgrCommRate}%</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-zinc-500">매출 배분율</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number" min="1" max="100" value={mgrCommRate}
+                        onChange={(e) => setMgrCommRate(e.target.value)}
+                        className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-amber-600 text-center focus:outline-none focus:border-amber-500"
+                      />
+                      <span className="text-sm font-bold text-amber-600">%</span>
+                    </div>
+                  </div>
                   <input type="range" min="5" max="50" value={mgrCommRate}
                     onChange={(e) => setMgrCommRate(e.target.value)}
                     className="w-full accent-amber-500" />
