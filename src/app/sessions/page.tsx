@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getMembers, saveMembers, getTrainers, syncMemberTotals, Member, SessionPackage, Trainer } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, Member, SessionPackage, Trainer } from "../lib/store";
 
 function formatKRW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
@@ -83,9 +83,11 @@ function emptyPkg(member?: Member, trainers?: Trainer[]): Partial<SessionPackage
 }
 
 export default function SessionsPage() {
-  const [members, setMembers]   = useState<Member[]>([]);
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
-  const [filter, setFilter]     = useState<FilterType>("진행중");
+  const [members, setMembers]       = useState<Member[]>([]);
+  const [trainers, setTrainers]     = useState<Trainer[]>([]);
+  const [savedBranches, setSavedBranches] = useState<string[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("전체");
+  const [filter, setFilter]         = useState<FilterType>("진행중");
   const [trainerFilter, setTrainerFilter] = useState<string>("전체");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<{ memberId: string; pkgId: string } | null>(null);
@@ -103,7 +105,21 @@ export default function SessionsPage() {
   useEffect(() => {
     setMembers(getMembers());
     setTrainers(getTrainers().filter((t) => t.status === "재직"));
+    setSavedBranches(getBranches());
   }, []);
+
+  // 트레이너명 → 지점 매핑
+  const trainerBranchMap = useMemo(() =>
+    Object.fromEntries(trainers.map((t) => [t.name, t.branch || ""])),
+    [trainers]
+  );
+
+  // 지점 목록 (저장된 지점 + 트레이너 지점 합산)
+  const branches = useMemo(() => {
+    const fromTrainers = trainers.map((t) => t.branch).filter(Boolean);
+    const merged = Array.from(new Set([...savedBranches, ...fromTrainers]));
+    return ["전체", ...merged];
+  }, [trainers, savedBranches]);
 
   // 모든 패키지를 뷰로 펼치기
   const allPackages: PackageView[] = useMemo(() =>
@@ -111,15 +127,23 @@ export default function SessionsPage() {
       (m.packages ?? []).map((pkg) => ({ pkg, member: m }))
     ), [members]);
 
-  // 담당 트레이너 목록 (전체 패키지에서 추출)
+  // 지점 필터 적용된 패키지
+  const branchPackages = useMemo(() =>
+    selectedBranch === "전체"
+      ? allPackages
+      : allPackages.filter((v) => trainerBranchMap[v.pkg.trainerName] === selectedBranch),
+    [allPackages, selectedBranch, trainerBranchMap]
+  );
+
+  // 담당 트레이너 목록 (지점 필터 후 추출)
   const trainerNames = useMemo(() => {
-    const names = [...new Set(allPackages.map((v) => v.pkg.trainerName).filter(Boolean))];
+    const names = [...new Set(branchPackages.map((v) => v.pkg.trainerName).filter(Boolean))];
     return names;
-  }, [allPackages]);
+  }, [branchPackages]);
 
   // 필터 적용
   const filtered = useMemo(() => {
-    let list = allPackages;
+    let list = branchPackages;
     if (filter === "진행중") list = list.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions > 0);
     if (filter === "완료")   list = list.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions === 0);
     if (trainerFilter !== "전체") list = list.filter((v) => v.pkg.trainerName === trainerFilter);
@@ -129,16 +153,16 @@ export default function SessionsPage() {
       const rb = b.pkg.totalSessions - b.pkg.conductedSessions;
       return ra - rb;
     });
-  }, [allPackages, filter, trainerFilter]);
+  }, [branchPackages, filter, trainerFilter]);
 
-  // 통계
-  const active   = allPackages.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions > 0).length;
-  const done     = allPackages.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions === 0).length;
-  const urgent   = allPackages.filter((v) => {
+  // 통계 (지점 필터 기준)
+  const active   = branchPackages.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions > 0).length;
+  const done     = branchPackages.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions === 0).length;
+  const urgent   = branchPackages.filter((v) => {
     const r = v.pkg.totalSessions - v.pkg.conductedSessions;
     return r === 0;
   }).length;
-  const lowAlert = allPackages.filter((v) => {
+  const lowAlert = branchPackages.filter((v) => {
     const r = v.pkg.totalSessions - v.pkg.conductedSessions;
     return r > 0 && r <= 3;
   }).length;
@@ -286,6 +310,29 @@ export default function SessionsPage() {
           ))}
         </div>
 
+        {/* 지점 탭 */}
+        {branches.length > 1 && (
+          <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl overflow-x-auto scrollbar-hide">
+            {branches.map((branch) => {
+              const count = branch === "전체"
+                ? allPackages.length
+                : allPackages.filter((v) => trainerBranchMap[v.pkg.trainerName] === branch).length;
+              return (
+                <button key={branch}
+                  onClick={() => { setSelectedBranch(branch); setTrainerFilter("전체"); }}
+                  className={`flex-shrink-0 flex-1 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                    selectedBranch === branch
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-600"
+                  }`}>
+                  {branch}
+                  <span className="ml-1 text-xs font-normal opacity-60">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* 상태 필터 */}
         <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
           {(["진행중", "완료", "전체"] as FilterType[]).map((f) => (
@@ -322,6 +369,8 @@ export default function SessionsPage() {
           <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
             {allPackages.length === 0
               ? <>등록된 패키지가 없습니다.<br /><button onClick={openAdd} className="mt-2 text-blue-500 font-semibold">+ 패키지 등록하기</button></>
+              : branchPackages.length === 0
+              ? <><strong>{selectedBranch}</strong>에 등록된 패키지가 없습니다.</>
               : "해당 조건의 패키지가 없습니다."}
           </div>
         ) : (
