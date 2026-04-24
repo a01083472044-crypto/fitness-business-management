@@ -96,6 +96,7 @@ export interface MonthlyCosts {
   otherFixed: number;
   supplies: number;
   marketing: number;
+  parkingFee: number;    // 주차비
   paymentFee: number;    // 결제 수수료 (카드 등)
   otherVariable: number;
   isVat: boolean;
@@ -264,7 +265,7 @@ export function emptyCosts(month: string): MonthlyCosts {
   return {
     month, rent: 0, managementFee: 0, trainerSalary: 0, freelanceSalary: 0,
     utilities: 0, communication: 0, depreciation: 0, otherFixed: 0,
-    supplies: 0, marketing: 0, paymentFee: 0, otherVariable: 0, isVat: false,
+    supplies: 0, marketing: 0, parkingFee: 0, paymentFee: 0, otherVariable: 0, isVat: false,
   };
 }
 

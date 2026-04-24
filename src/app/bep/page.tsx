@@ -66,6 +66,7 @@ export default function BepPage() {
   // 변동비
   const [supplies, setSupplies] = useState("");
   const [marketing, setMarketing] = useState("");
+  const [parkingFee, setParkingFee] = useState("");
   const [paymentFee, setPaymentFee] = useState(0);
   const [otherVariable, setOtherVariable] = useState("");
 
@@ -88,6 +89,7 @@ export default function BepPage() {
       setOtherFixed(found.otherFixed > 0 ? String(found.otherFixed) : "");
       setSupplies(found.supplies > 0 ? String(found.supplies) : "");
       setMarketing(found.marketing > 0 ? String(found.marketing) : "");
+      setParkingFee((found.parkingFee ?? 0) > 0 ? String(found.parkingFee) : "");
       setPaymentFee(found.paymentFee ?? 0);
       setOtherVariable(found.otherVariable > 0 ? String(found.otherVariable) : "");
       setIsVat(found.isVat);
@@ -109,6 +111,7 @@ export default function BepPage() {
   const variableCost =
     parseKorean(supplies) +
     parseKorean(marketing) +
+    parseKorean(parkingFee) +
     paymentFee +
     parseKorean(otherVariable);
 
@@ -181,6 +184,7 @@ export default function BepPage() {
           <p className="font-bold text-zinc-900">월 변동비</p>
           <NumInput label="소모품비" value={supplies} onChange={setSupplies} linked={linked && parseKorean(supplies) > 0} />
           <NumInput label="마케팅 / 광고비" value={marketing} onChange={setMarketing} linked={linked && parseKorean(marketing) > 0} />
+          <NumInput label="주차비" value={parkingFee} onChange={setParkingFee} linked={linked && parseKorean(parkingFee) > 0} />
           <div>
             <label className="block text-xs font-semibold text-zinc-500 mb-1.5 flex items-center gap-1.5">
               💳 결제 수수료

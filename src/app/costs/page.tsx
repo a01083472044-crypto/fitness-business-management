@@ -91,7 +91,7 @@ export default function CostsPage() {
     costs.trainerSalary + costs.trainerSalary * 0.1065 +
     costs.freelanceSalary + costs.freelanceSalary * 0.033 +
     costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
-  const totalVariable = costs.supplies + costs.marketing + (costs.paymentFee ?? 0) + costs.otherVariable;
+  const totalVariable = costs.supplies + costs.marketing + (costs.parkingFee ?? 0) + (costs.paymentFee ?? 0) + costs.otherVariable;
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -131,6 +131,7 @@ export default function CostsPage() {
           <p className="font-bold text-zinc-900">변동비</p>
           <NumField label="소모품비" value={costs.supplies} onChange={(v) => update("supplies", v)} />
           <NumField label="마케팅 / 광고비" value={costs.marketing} onChange={(v) => update("marketing", v)} />
+          <NumField label="주차비" value={costs.parkingFee ?? 0} onChange={(v) => update("parkingFee", v)} />
           <div>
             <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
               💳 결제 수수료 <span className="text-blue-500 font-normal">(회원 등록 시 자동 반영)</span>

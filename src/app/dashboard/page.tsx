@@ -103,7 +103,7 @@ export default function DashboardPage() {
   const vat           = costs.isVat ? actualRevenue * 0.1 : 0;
   const otherFixed    = costs.rent + (costs.managementFee ?? 0) + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
   const paymentFee    = costs.paymentFee ?? 0;
-  const totalVariable = costs.supplies + costs.marketing + paymentFee + costs.otherVariable;
+  const totalVariable = costs.supplies + costs.marketing + (costs.parkingFee ?? 0) + paymentFee + costs.otherVariable;
   const netProfit     = actualRevenue - vat - effectiveSalaryCost - otherFixed - totalVariable;
 
   // ── 인건비 진단 ───────────────────────────────────────────────────────────
