@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   getTrainers, getSchedules, getMembers, getSettlements, saveSettlements,
-  getCosts, saveCosts, emptyCosts,
+  getCosts, saveCosts, emptyCosts, getBranches,
   Trainer, TrainerSettlement, ScheduleEntry, Member,
 } from "../lib/store";
 
@@ -102,15 +102,30 @@ export default function SettlementPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [settlements, setSettlements] = useState<TrainerSettlement[]>([]);
   const [memos, setMemos] = useState<Record<string, string>>({});
+  const [savedBranches, setSavedBranches] = useState<string[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("전체");
 
   useEffect(() => {
     setTrainers(getTrainers());
     setSchedules(getSchedules());
     setMembers(getMembers());
     setSettlements(getSettlements());
+    setSavedBranches(getBranches());
   }, []);
 
-  const activeTrainers = trainers.filter((t) => t.status === "재직");
+  // 지점 목록
+  const branches = useMemo(() => {
+    const fromTrainers = trainers.map((t) => t.branch).filter(Boolean);
+    const merged = Array.from(new Set([...savedBranches, ...fromTrainers]));
+    return ["전체", ...merged];
+  }, [trainers, savedBranches]);
+
+  const allActiveTrainers = trainers.filter((t) => t.status === "재직");
+
+  // 지점 필터 적용
+  const activeTrainers = selectedBranch === "전체"
+    ? allActiveTrainers
+    : allActiveTrainers.filter((t) => t.branch === selectedBranch);
 
   // settlements for selected month
   const monthSettlements = settlements.filter((s) => s.month === selMonth);
@@ -239,6 +254,29 @@ export default function SettlementPage() {
           </div>
         </div>
 
+        {/* 지점 탭 */}
+        {branches.length > 1 && (
+          <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl overflow-x-auto scrollbar-hide">
+            {branches.map((branch) => {
+              const count = branch === "전체"
+                ? allActiveTrainers.length
+                : allActiveTrainers.filter((t) => t.branch === branch).length;
+              return (
+                <button key={branch}
+                  onClick={() => setSelectedBranch(branch)}
+                  className={`flex-shrink-0 flex-1 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                    selectedBranch === branch
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-600"
+                  }`}>
+                  {branch}
+                  <span className="ml-1 text-xs font-normal opacity-60">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* 정산 현황 */}
         {totalCount > 0 && (
           <div className="bg-white rounded-2xl border border-zinc-100 p-4 flex items-center justify-between">
@@ -258,7 +296,9 @@ export default function SettlementPage() {
 
         {activeTrainers.length === 0 ? (
           <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
-            재직 중인 트레이너가 없습니다.
+            {selectedBranch === "전체"
+              ? "재직 중인 트레이너가 없습니다."
+              : <><strong>{selectedBranch}</strong>에 재직 중인 트레이너가 없습니다.</>}
           </div>
         ) : (
           <div className="space-y-4">
