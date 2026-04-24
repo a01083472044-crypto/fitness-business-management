@@ -173,7 +173,7 @@ export default function SchedulePage() {
     setEditingId(null);
     setFormDate(date);
     setFormTime(time);
-    setFormTrainerId(trainer?.id ?? (trainers[0]?.id ?? ""));
+    setFormTrainerId(trainer?.id ?? (activeTrainers[0]?.id ?? ""));
     setFormMemberId(members[0]?.id ?? "");
     setFormPackageId("");
     setFormNote("");
@@ -574,14 +574,18 @@ export default function SchedulePage() {
               <select value={formTrainerId}
                 onChange={(e) => setFormTrainerId(e.target.value)} className={inputCls}>
                 <option value="">트레이너 선택</option>
-                {trainers.map((t) => (
+                {activeTrainers.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name} ({t.empType}{t.branch ? ` · ${t.branch}` : ""})
                   </option>
                 ))}
               </select>
-              {trainers.length === 0 && (
-                <p className="mt-1 text-xs text-zinc-400">💡 트레이너 관리에서 먼저 등록하세요</p>
+              {activeTrainers.length === 0 && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  {selectedBranch === "전체"
+                    ? "💡 트레이너 관리에서 먼저 등록하세요"
+                    : `💡 ${selectedBranch}에 소속된 트레이너가 없습니다`}
+                </p>
               )}
             </Field>
 
