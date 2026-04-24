@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  getMembers, getCosts, getSchedules, getSettlements, getTrainers,
+  getMembers, getCosts, getSchedules, getSettlements, getTrainers, getBranches,
   emptyCosts, currentMonth, setPrefill,
   MonthlyCosts, ScheduleEntry, Member, TrainerSettlement,
 } from "../lib/store";
@@ -54,12 +54,18 @@ export default function DashboardPage() {
   const [settlements, setSettlements] = useState<TrainerSettlement[]>([]);
   const [trainerCount, setTrainerCount] = useState(0);
   const [sent, setSent] = useState(false);
+  const [savedBranches, setSavedBranches] = useState<string[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("전체");
+  const [allTrainers, setAllTrainers] = useState<ReturnType<typeof getTrainers>>([]);
 
   useEffect(() => {
+    const trainers = getTrainers();
+    setAllTrainers(trainers);
     setSchedules(getSchedules());
     setMembers(getMembers());
     setSettlements(getSettlements());
-    setTrainerCount(getTrainers().filter((t) => t.status === "재직").length);
+    setTrainerCount(trainers.filter((t) => t.status === "재직").length);
+    setSavedBranches(getBranches());
   }, []);
 
   useEffect(() => {
@@ -68,17 +74,48 @@ export default function DashboardPage() {
     setSent(false);
   }, [month]);
 
+  // ── 지점 필터 ─────────────────────────────────────────────────────────────
+  const branches = useMemo(() => {
+    const set = new Set<string>();
+    allTrainers.forEach((t) => { if (t.branch) set.add(t.branch); });
+    savedBranches.forEach((b) => set.add(b));
+    return Array.from(set);
+  }, [allTrainers, savedBranches]);
+
+  const trainerBranchMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    allTrainers.forEach((t) => { map[t.name] = t.branch; });
+    return map;
+  }, [allTrainers]);
+
+  const branchMembers = useMemo(() => {
+    if (selectedBranch === "전체") return members;
+    return members.filter((m) =>
+      m.packages?.some((pkg) => trainerBranchMap[pkg.trainerName] === selectedBranch)
+    );
+  }, [members, selectedBranch, trainerBranchMap]);
+
+  const branchSchedules = useMemo(() => {
+    if (selectedBranch === "전체") return schedules;
+    return schedules.filter((s) => trainerBranchMap[s.trainerName] === selectedBranch);
+  }, [schedules, selectedBranch, trainerBranchMap]);
+
+  const branchTrainerCount = useMemo(() => {
+    if (selectedBranch === "전체") return trainerCount;
+    return allTrainers.filter((t) => t.status === "재직" && t.branch === selectedBranch).length;
+  }, [allTrainers, selectedBranch, trainerCount]);
+
   // ── 이번달 스케줄 기준 매출 ──────────────────────────────────────────────
   const { revenue: scheduleRevenue, sessions: doneSessions } = useMemo(
-    () => calcMonthRevenue(schedules, members, month),
-    [schedules, members, month]
+    () => calcMonthRevenue(branchSchedules, branchMembers, month),
+    [branchSchedules, branchMembers, month]
   );
 
   // ── 회원 누적 집계 ────────────────────────────────────────────────────────
-  const totalMembers   = members.length;
-  const totalPaid      = members.reduce((s, m) => s + m.totalPayment, 0);
-  const totalSessions  = members.reduce((s, m) => s + m.totalSessions, 0);
-  const conductedTotal = members.reduce((s, m) => s + m.conductedSessions, 0);
+  const totalMembers   = branchMembers.length;
+  const totalPaid      = branchMembers.reduce((s, m) => s + m.totalPayment, 0);
+  const totalSessions  = branchMembers.reduce((s, m) => s + m.totalSessions, 0);
+  const conductedTotal = branchMembers.reduce((s, m) => s + m.conductedSessions, 0);
   const allTimeRatio   = totalSessions > 0 ? conductedTotal / totalSessions : 0;
 
   // 실소진매출: 스케줄 기준 우선, 없으면 누적 비율 추정
@@ -87,8 +124,12 @@ export default function DashboardPage() {
 
   // ── 급여 정산 데이터 ─────────────────────────────────────────────────────
   const monthSettlements = useMemo(
-    () => settlements.filter((s) => s.month === month && s.settled),
-    [settlements, month]
+    () => {
+      const allSettled = settlements.filter((s) => s.month === month && s.settled);
+      if (selectedBranch === "전체") return allSettled;
+      return allSettled.filter((s) => trainerBranchMap[s.trainerName] === selectedBranch);
+    },
+    [settlements, month, selectedBranch, trainerBranchMap]
   );
   const settledCount      = monthSettlements.length;
   const hasSettlement     = settledCount > 0;
@@ -154,11 +195,30 @@ export default function DashboardPage() {
             className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:border-blue-500" />
         </div>
 
+        {/* 지점 탭 */}
+        {branches.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {["전체", ...branches].map((b) => (
+              <button
+                key={b}
+                onClick={() => setSelectedBranch(b)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition ${
+                  selectedBranch === b
+                    ? "bg-blue-600 text-white"
+                    : "bg-white border border-zinc-200 text-zinc-500"
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 연동 현황 요약 */}
         <div className="grid grid-cols-4 gap-2">
           {[
             { label: "회원",     value: `${totalMembers}명`,  ok: totalMembers > 0 },
-            { label: "트레이너", value: `${trainerCount}명`,  ok: trainerCount > 0 },
+            { label: "트레이너", value: `${branchTrainerCount}명`,  ok: branchTrainerCount > 0 },
             { label: "완료수업", value: `${doneSessions}회`,  ok: doneSessions > 0 },
             { label: "급여정산", value: `${settledCount}명`,  ok: hasSettlement },
           ].map(({ label, value, ok }) => (
