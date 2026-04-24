@@ -87,6 +87,7 @@ export function syncMemberTotals(m: Member): Member {
 export interface MonthlyCosts {
   month: string;
   rent: number;
+  managementFee: number; // 관리비
   trainerSalary: number;
   freelanceSalary: number;
   utilities: number;
@@ -261,7 +262,7 @@ export function currentMonth(): string {
 
 export function emptyCosts(month: string): MonthlyCosts {
   return {
-    month, rent: 0, trainerSalary: 0, freelanceSalary: 0,
+    month, rent: 0, managementFee: 0, trainerSalary: 0, freelanceSalary: 0,
     utilities: 0, communication: 0, depreciation: 0, otherFixed: 0,
     supplies: 0, marketing: 0, paymentFee: 0, otherVariable: 0, isVat: false,
   };

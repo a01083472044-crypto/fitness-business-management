@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const salarySource        = hasSettlement ? `급여 정산 (${settledCount}명 완료)` : "비용 관리 수동 입력";
 
   const vat           = costs.isVat ? actualRevenue * 0.1 : 0;
-  const otherFixed    = costs.rent + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
+  const otherFixed    = costs.rent + (costs.managementFee ?? 0) + costs.utilities + costs.communication + costs.depreciation + costs.otherFixed;
   const paymentFee    = costs.paymentFee ?? 0;
   const totalVariable = costs.supplies + costs.marketing + paymentFee + costs.otherVariable;
   const netProfit     = actualRevenue - vat - effectiveSalaryCost - otherFixed - totalVariable;
@@ -246,6 +246,7 @@ export default function DashboardPage() {
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">📋 기타 비용</p>
           <div className="bg-white rounded-2xl border border-zinc-100 p-4 divide-y divide-zinc-50">
             {costs.rent > 0        && <Row label="임대료"        value={fmtW(costs.rent)} />}
+            {(costs.managementFee ?? 0) > 0 && <Row label="관리비" value={fmtW(costs.managementFee ?? 0)} />}
             {(costs.utilities + costs.communication) > 0 && (
               <Row label="공과금·통신비" value={fmtW(costs.utilities + costs.communication)} />
             )}

@@ -56,6 +56,7 @@ export default function BepPage() {
 
   // 고정비
   const [rent, setRent] = useState("");
+  const [managementFee, setManagementFee] = useState("");
   const [salary, setSalary] = useState("");
   const [freelance, setFreelance] = useState("");
   const [utilities, setUtilities] = useState("");
@@ -79,6 +80,7 @@ export default function BepPage() {
     const found = all.find((c) => c.month === month);
     if (found) {
       setRent(found.rent > 0 ? String(found.rent) : "");
+      setManagementFee((found.managementFee ?? 0) > 0 ? String(found.managementFee) : "");
       setSalary(found.trainerSalary > 0 ? String(found.trainerSalary) : "");
       setFreelance(found.freelanceSalary > 0 ? String(found.freelanceSalary) : "");
       setUtilities((found.utilities + found.communication) > 0 ? String(found.utilities + found.communication) : "");
@@ -97,6 +99,7 @@ export default function BepPage() {
 
   const fixedCost =
     parseKorean(rent) +
+    parseKorean(managementFee) +
     parseKorean(salary) * 1.1065 +
     parseKorean(freelance) * 1.033 +
     parseKorean(utilities) +
@@ -157,6 +160,7 @@ export default function BepPage() {
         <section className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
           <p className="font-bold text-zinc-900">월 고정비</p>
           <NumInput label="임차료 (월세)" value={rent} onChange={setRent} linked={linked && parseKorean(rent) > 0} />
+          <NumInput label="관리비" value={managementFee} onChange={setManagementFee} linked={linked && parseKorean(managementFee) > 0} />
           <NumInput label="정규직 인건비 합계 (세전)" value={salary} onChange={setSalary}
             hint="4대보험(10.65%)은 자동 추가됩니다" linked={linked && parseKorean(salary) > 0} />
           <NumInput label="프리랜서 인건비 합계 (세전)" value={freelance} onChange={setFreelance}
