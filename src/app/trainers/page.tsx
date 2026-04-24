@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getTrainers, saveTrainers, Trainer, SalaryType } from "../lib/store";
+import { getTrainers, saveTrainers, getBranches, saveBranches, Trainer, SalaryType } from "../lib/store";
 
 const inputCls =
   "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm";
@@ -38,6 +38,8 @@ type FilterType = "전체" | "재직" | "퇴사";
 
 export default function TrainersPage() {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [savedBranches, setSavedBranches] = useState<string[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("전체");
   const [filter, setFilter] = useState<FilterType>("재직");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export default function TrainersPage() {
 
   useEffect(() => {
     setTrainers(getTrainers());
+    setSavedBranches(getBranches());
   }, []);
 
   const persist = (updated: Trainer[]) => {
@@ -86,14 +89,26 @@ export default function TrainersPage() {
     ));
   };
 
-  const active    = trainers.filter((t) => t.status === "재직");
-  const inactive  = trainers.filter((t) => t.status === "퇴사");
+  // 지점 목록
+  const branches = (() => {
+    const fromTrainers = trainers.map((t) => t.branch).filter(Boolean);
+    const merged = Array.from(new Set([...savedBranches, ...fromTrainers]));
+    return ["전체", ...merged];
+  })();
+
+  // 지점 필터 적용
+  const branchTrainers = selectedBranch === "전체"
+    ? trainers
+    : trainers.filter((t) => t.branch === selectedBranch);
+
+  const active    = branchTrainers.filter((t) => t.status === "재직");
+  const inactive  = branchTrainers.filter((t) => t.status === "퇴사");
   const fullTime  = active.filter((t) => t.empType === "정규직");
   const freelance = active.filter((t) => t.empType === "프리랜서");
 
   const filtered =
     filter === "재직"  ? active   :
-    filter === "퇴사"  ? inactive : trainers;
+    filter === "퇴사"  ? inactive : branchTrainers;
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -128,6 +143,29 @@ export default function TrainersPage() {
           ))}
         </div>
 
+        {/* 지점 탭 */}
+        {branches.length > 1 && (
+          <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl overflow-x-auto scrollbar-hide">
+            {branches.map((branch) => {
+              const count = branch === "전체"
+                ? trainers.length
+                : trainers.filter((t) => t.branch === branch).length;
+              return (
+                <button key={branch}
+                  onClick={() => setSelectedBranch(branch)}
+                  className={`flex-shrink-0 flex-1 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                    selectedBranch === branch
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-600"
+                  }`}>
+                  {branch}
+                  <span className="ml-1 text-xs font-normal opacity-60">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* 필터 탭 */}
         <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
           {(["재직", "퇴사", "전체"] as FilterType[]).map((f) => (
@@ -149,7 +187,10 @@ export default function TrainersPage() {
         {/* 트레이너 목록 */}
         {filtered.length === 0 ? (
           <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
-            {filter === "재직" ? "재직 중인 트레이너가 없습니다." : "해당 트레이너가 없습니다."}<br />
+            {selectedBranch !== "전체"
+              ? <><strong>{selectedBranch}</strong>에 {filter === "재직" ? "재직 중인 " : ""}트레이너가 없습니다.</>
+              : filter === "재직" ? "재직 중인 트레이너가 없습니다." : "해당 트레이너가 없습니다."
+            }<br />
             <button onClick={openAdd} className="mt-3 text-blue-500 font-semibold">+ 트레이너 등록하기</button>
           </div>
         ) : (
