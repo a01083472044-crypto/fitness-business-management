@@ -93,20 +93,17 @@ const ROLE_INFO = {
   manager: { label: "센터장 / 팀장",                icon: "👔", color: "amber"  },
 };
 
-function retentionBonus(base: number, rate: number): number {
-  if (rate >= 90) return base * 0.35;
-  if (rate >= 80) return base * 0.25;
-  if (rate >= 70) return base * 0.15;
-  if (rate >= 60) return base * 0.10;
-  return 0;
-}
+type CalcMode = "diagnose" | "newHire";
 
-function retentionGrade(rate: number) {
-  if (rate >= 90) return { label: "최우수", color: "emerald", bonus: "기본급 35%" };
-  if (rate >= 80) return { label: "우수",   color: "blue",    bonus: "기본급 25%" };
-  if (rate >= 70) return { label: "양호",   color: "yellow",  bonus: "기본급 15%" };
-  if (rate >= 60) return { label: "보통",   color: "orange",  bonus: "기본급 10%" };
-  return           { label: "미달",   color: "zinc",    bonus: "성과급 없음" };
+function diagGrade(ratio: number) {
+  if (ratio <= 0) return null;
+  return ratio < 20
+    ? { icon: "✅", label: "매우 적정", desc: "인건비 부담 낮음 — 추가 채용 검토 가능",       bg: "bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-400" }
+    : ratio < 30
+    ? { icon: "✅", label: "적정",     desc: "업계 권장 범위 내 — 현 급여 구조 유지 가능",    bg: "bg-blue-50",    text: "text-blue-700",    bar: "bg-blue-400"    }
+    : ratio < 40
+    ? { icon: "⚠️", label: "주의",    desc: "권장 범위 상단 — 매출 증가 또는 구조 재검토 권장", bg: "bg-yellow-50",  text: "text-yellow-700",  bar: "bg-yellow-400"  }
+    :              { icon: "🔴", label: "위험",    desc: "40% 초과 — 급여 구조 즉각 검토 필요",  bg: "bg-red-50",     text: "text-red-700",     bar: "bg-red-400"     };
 }
 
 const IND_KEY = "gym_salary_individual";
@@ -118,6 +115,7 @@ function loadInd() {
 function IndividualCalc() {
   const saved = typeof window !== "undefined" ? loadInd() : null;
 
+  const [mode, setMode]           = useState<CalcMode>(saved?.mode ?? "diagnose");
   const [role, setRole]           = useState<RoleType>(saved?.role ?? "trainer");
   const [empType, setEmpType]     = useState<EmpType>(saved?.empType ?? "정규직");
   const [salaryType, setSalaryType]       = useState<SalaryType>(saved?.salaryType ?? "base+rate");
@@ -131,13 +129,19 @@ function IndividualCalc() {
   const [sessionCount, setCountRaw]       = useState<string>(saved?.sessionCount ?? "");
   const [mgrSessionFee, setMgrFeeRaw]     = useState<string>(saved?.mgrSessionFee ?? "");
   const [mgrSessionCount, setMgrCountRaw] = useState<string>(saved?.mgrSessionCount ?? "");
-  const [retention, setRet]               = useState<string>(saved?.retention ?? "75");
+  const [centerRevenue, setCenterRevenueRaw] = useState<string>(saved?.centerRevenue ?? "");
+  // 신규 채용 모드 전용
+  const [nhRevenue, setNhRevenueRaw]   = useState<string>(saved?.nhRevenue ?? "");
+  const [nhRatio, setNhRatio]          = useState<string>(saved?.nhRatio ?? "25");
+  const [nhPtRevenue, setNhPtRevRaw]   = useState<string>(saved?.nhPtRevenue ?? "");
+  const [nhBase, setNhBaseRaw]         = useState<string>(saved?.nhBase ?? "50만");
 
   function p(patch: Record<string, string>) {
     const cur = loadInd() ?? {};
     localStorage.setItem(IND_KEY, JSON.stringify({ ...cur, ...patch }));
   }
 
+  const setMode2        = (v: CalcMode)         => { setMode(v);           p({ mode: v }); };
   const setRole2        = (v: RoleType)         => { setRole(v);           p({ role: v }); };
   const setEmp2         = (v: EmpType)          => { setEmpType(v);        p({ empType: v }); };
   const setSalType      = (v: SalaryType)       => { setSalaryType(v);     p({ salaryType: v }); };
@@ -151,7 +155,11 @@ function IndividualCalc() {
   const setCount        = (v: string)           => { setCountRaw(v);       p({ sessionCount: v }); };
   const setMgrFee       = (v: string)           => { setMgrFeeRaw(v);      p({ mgrSessionFee: v }); };
   const setMgrCount     = (v: string)           => { setMgrCountRaw(v);    p({ mgrSessionCount: v }); };
-  const setRet2         = (v: string)           => { setRet(v);            p({ retention: v }); };
+  const setCenterRevenue= (v: string)           => { setCenterRevenueRaw(v); p({ centerRevenue: v }); };
+  const setNhRevenue    = (v: string)           => { setNhRevenueRaw(v);   p({ nhRevenue: v }); };
+  const setNhRatio2     = (v: string)           => { setNhRatio(v);        p({ nhRatio: v }); };
+  const setNhPtRevenue  = (v: string)           => { setNhPtRevRaw(v);     p({ nhPtRevenue: v }); };
+  const setNhBase       = (v: string)           => { setNhBaseRaw(v);      p({ nhBase: v }); };
 
   const base      = parseKorean(baseSalary);
   const fee       = parseKorean(sessionFee);
@@ -206,165 +214,92 @@ function IndividualCalc() {
   const freelancerNet   = isFreelancer ? grossSalary * 0.967 : 0; // 프리랜서 실수령
   const withholdingTax  = isFreelancer ? grossSalary * 0.033 : 0; // 원천세 (사업자 납부)
 
-  const retGrade    = retentionGrade(Number(retention));
-
   const hasResult = grossSalary > 0;
+  const cRev      = parseKorean(centerRevenue);
+  const diagRatio = cRev > 0 && companyCost > 0 ? (companyCost / cRev) * 100 : 0;
+
+  // 신규 채용
+  const nhRev     = parseKorean(nhRevenue);
+  const nhBudget  = nhRev * Number(nhRatio) / 100;
+  const nhMaxGross= nhBudget > 0 ? (isFreelancer ? nhBudget : nhBudget / (1 + INS_RATE)) : 0;
+  const nhPtRev   = parseKorean(nhPtRevenue);
+  const nhBaseAmt = parseKorean(nhBase);
 
   return (
     <section className="space-y-4">
       <div>
         <p className="text-lg font-black text-zinc-900">직원 적정 급여 책정기</p>
-        <p className="text-xs text-zinc-500 mt-0.5">직무별 고정급 + 성과급 혼합 구조 기반</p>
+        <p className="text-xs text-zinc-500 mt-0.5">현직원 진단 · 신규 채용 급여 계산</p>
       </div>
 
-      {/* 역할 선택 */}
+      {/* 모드 선택 */}
+      <div className="grid grid-cols-2 gap-2">
+        {([
+          { key: "diagnose", icon: "🔍", label: "현직원 급여 진단",    desc: "현 급여가 매출 대비 적정한지 확인" },
+          { key: "newHire",  icon: "🆕", label: "신규 채용 급여 책정", desc: "지금 매출로 채용 가능한 급여 계산" },
+        ] as { key: CalcMode; icon: string; label: string; desc: string }[]).map(({ key, icon, label, desc }) => (
+          <button key={key} onClick={() => setMode2(key)}
+            className={`rounded-xl border p-3 text-left transition ${mode === key ? "border-blue-500 bg-blue-50" : "border-zinc-200 bg-white hover:bg-zinc-50"}`}>
+            <p className="text-lg mb-0.5">{icon}</p>
+            <p className={`text-xs font-bold ${mode === key ? "text-blue-700" : "text-zinc-700"}`}>{label}</p>
+            <p className={`text-xs mt-0.5 ${mode === key ? "text-blue-500" : "text-zinc-400"}`}>{desc}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* 역할 선택 (공통) */}
       <div className="grid grid-cols-3 gap-2">
         {(Object.entries(ROLE_INFO) as [RoleType, typeof ROLE_INFO.front][]).map(([key, info]) => (
           <button key={key} onClick={() => setRole2(key)}
-            className={`rounded-xl border p-3 text-center transition ${
-              role === key
-                ? "border-blue-500 bg-blue-50"
-                : "border-zinc-200 bg-white hover:bg-zinc-50"
-            }`}>
+            className={`rounded-xl border p-3 text-center transition ${role === key ? "border-blue-500 bg-blue-50" : "border-zinc-200 bg-white hover:bg-zinc-50"}`}>
             <p className="text-xl mb-1">{info.icon}</p>
             <p className={`text-xs font-bold leading-tight ${role === key ? "text-blue-700" : "text-zinc-600"}`}>
-              {key === "front"   ? "프론트\n데스크" :
-               key === "trainer" ? "PT\n트레이너" : "센터장\n팀장"}
+              {key === "front" ? "프론트\n데스크" : key === "trainer" ? "PT\n트레이너" : "센터장\n팀장"}
             </p>
           </button>
         ))}
       </div>
 
-      {/* 역할 설명 */}
-      <div className={`rounded-xl p-3 text-xs space-y-1 ${
-        role === "front"   ? "bg-violet-50 text-violet-700" :
-        role === "trainer" ? "bg-blue-50 text-blue-700"     : "bg-amber-50 text-amber-700"
-      }`}>
-        {role === "front" && <>
-          <p className="font-bold">🖥️ 순수 고정급 구조</p>
-          <p>운영 유지 역할이므로 성과급 연동 없이 안정적인 월급제가 적합합니다.</p>
-        </>}
-        {role === "trainer" && <>
-          <p className="font-bold">🏋️ 기본지원금 + PT 매출 배분 구조</p>
-          <p>국내 통상: 기본지원금 50~80만원 + PT 매출의 40~60% 배분</p>
-          <p>매출 비중이 너무 높으면 단기 영업에만 집중되는 부작용이 발생합니다.</p>
-        </>}
-        {role === "manager" && <>
-          <p className="font-bold">👔 기본급 + 조직 성과 연동 성과급</p>
-          <p>개인 매출이 아닌 회원 유지율(Retention Rate) 기반 성과급이 권장됩니다.</p>
-          <p className="text-xs opacity-80">출처: HFA 보고서, Two Brain Business</p>
-        </>}
-      </div>
+      {/* 고용 형태 (트레이너만, 공통) */}
+      {role === "trainer" && (
+        <div className="flex gap-2">
+          {(["정규직", "프리랜서"] as EmpType[]).map((t) => (
+            <button key={t} onClick={() => setEmp2(t)}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition border ${
+                empType === t
+                  ? t === "정규직" ? "bg-blue-600 text-white border-blue-600" : "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-white text-zinc-500 border-zinc-200"
+              }`}>
+              {t} <span className="text-xs font-normal opacity-70">{t === "정규직" ? "(4대보험)" : "(3.3%)"}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* 입력 폼 */}
-      <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
+      {/* ══ 현직원 급여 진단 모드 ══ */}
+      {mode === "diagnose" && (
+        <>
+          <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wide">현재 급여 정보</p>
 
-        {/* 고용 형태 (프론트/매니저는 정규직만) */}
-        {role === "trainer" && (
-          <div>
-            <p className="text-xs font-semibold text-zinc-500 mb-2">고용 형태</p>
-            <div className="flex gap-2">
-              {(["정규직", "프리랜서"] as EmpType[]).map((t) => (
-                <button key={t} onClick={() => setEmp2(t)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-semibold transition border ${
-                    empType === t
-                      ? t === "정규직"
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-emerald-600 text-white border-emerald-600"
-                      : "bg-white text-zinc-500 border-zinc-200"
-                  }`}>
-                  {t}
-                  <span className="ml-1 text-xs font-normal opacity-70">
-                    {t === "정규직" ? "(4대보험)" : "(3.3%)"}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 급여 구조 선택 (트레이너) */}
-        {role === "trainer" && (
-          <div>
-            <p className="text-xs font-semibold text-zinc-500 mb-2">급여 구조</p>
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { key: "base+rate",  label: "기본급\n+배분율"    },
-                { key: "rate",       label: "배분율\n만"          },
-                { key: "base+fixed", label: "기본급\n+고정수업료" },
-              ] as { key: SalaryType; label: string }[]).map(({ key, label }) => (
-                <button key={key} type="button" onClick={() => setSalType(key)}
-                  className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${
-                    salaryType === key
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
-                  }`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 기본급 (front: 항상, trainer: base+rate / base+fixed 구조만) */}
-        {(role === "front" || (role === "trainer" && (salaryType === "base+rate" || salaryType === "base+fixed"))) && (
-          <NumInput
-            label={role === "trainer" ? (salaryType === "base+fixed" ? "기본급 (월)" : "기본지원금 (월)") : "고정급 (월)"}
-            value={baseSalary}
-            onChange={setBase}
-            hint={role === "trainer" && salaryType !== "base+fixed" ? "국내 통상 50~80만원 수준" : undefined}
-          />
-        )}
-
-        {/* PT 트레이너 — 배분율 구조 */}
-        {role === "trainer" && (salaryType === "base+rate" || salaryType === "rate") && (
-          <>
-            <NumInput label="이 트레이너의 이번달 PT 매출" value={ptRevenue} onChange={setPt} />
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-zinc-500">매출 배분율</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number" min="1" max="100" value={commRate}
-                    onChange={(e) => setComm(e.target.value)}
-                    className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-blue-600 text-center focus:outline-none focus:border-blue-500"
-                  />
-                  <span className="text-sm font-bold text-blue-600">%</span>
-                </div>
+            {/* 트레이너 급여 구조 */}
+            {role === "trainer" && (
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: "base+rate", label: "기본급\n+배분율" },
+                  { key: "rate",      label: "배분율\n만" },
+                  { key: "base+fixed",label: "기본급\n+고정수업료" },
+                ] as { key: SalaryType; label: string }[]).map(({ key, label }) => (
+                  <button key={key} onClick={() => setSalType(key)}
+                    className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${salaryType === key ? "bg-blue-600 text-white border-blue-600" : "bg-white text-zinc-500 border-zinc-200"}`}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              <input type="range" min="30" max="70" value={commRate}
-                onChange={(e) => setComm(e.target.value)}
-                className="w-full accent-blue-600" />
-              <div className="flex justify-between text-xs text-zinc-400 mt-1">
-                <span>30%</span>
-                <span className="text-blue-600">40~60% 권장</span>
-                <span>70%</span>
-              </div>
-            </div>
-          </>
-        )}
+            )}
 
-        {/* PT 트레이너 — 고정수업료 구조 */}
-        {role === "trainer" && salaryType === "base+fixed" && (
-          <div className="grid grid-cols-2 gap-3">
-            <NumInput label="회당 고정수업료" value={sessionFee} onChange={setFee} />
-            <div>
-              <label className="block text-xs font-semibold text-zinc-500 mb-1.5">이번달 완료 수업</label>
-              <div className="relative">
-                <input type="number" min="0" placeholder="0" value={sessionCount}
-                  onChange={(e) => setCount(e.target.value)}
-                  className={inputCls + " pr-8"} />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">회</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 센터장 — 급여 구조 선택 */}
-        {role === "manager" && (
-          <>
-            <div>
-              <p className="text-xs font-semibold text-zinc-500 mb-2">급여 구조</p>
+            {/* 매니저 급여 구조 */}
+            {role === "manager" && (
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { key: "fixed",      label: "고정급" },
@@ -372,281 +307,289 @@ function IndividualCalc() {
                   { key: "rate",       label: "배분율\n만" },
                   { key: "base+fixed", label: "기본급\n+고정수업료" },
                 ] as { key: ManagerSalaryType; label: string }[]).map(({ key, label }) => (
-                  <button key={key} type="button" onClick={() => setMgrSalType(key)}
-                    className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${
-                      mgrSalaryType === key
-                        ? "bg-amber-500 text-white border-amber-500"
-                        : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
-                    }`}>
+                  <button key={key} onClick={() => setMgrSalType(key)}
+                    className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${mgrSalaryType === key ? "bg-amber-500 text-white border-amber-500" : "bg-white text-zinc-500 border-zinc-200"}`}>
                     {label}
                   </button>
                 ))}
               </div>
-            </div>
+            )}
 
-            {/* 고정급 / 기본급 (fixed, base+rate, base+fixed) */}
-            {mgrSalaryType !== "rate" && (
+            {/* 기본급/고정급 */}
+            {(role === "front" ||
+              (role === "trainer" && (salaryType === "base+rate" || salaryType === "base+fixed")) ||
+              (role === "manager" && mgrSalaryType !== "rate")) && (
               <NumInput
-                label={mgrSalaryType === "fixed" ? "고정급 (월)" : "기본급 (월)"}
-                value={baseSalary}
-                onChange={setBase}
+                label={role === "trainer" && salaryType !== "base+fixed" ? "기본지원금 (월)" : role === "manager" && mgrSalaryType === "fixed" ? "고정급 (월)" : "기본급 (월)"}
+                value={baseSalary} onChange={setBase}
+                hint={role === "trainer" && salaryType !== "base+fixed" ? "국내 통상 50~80만원 수준" : undefined}
               />
             )}
 
-            {/* 배분율 구조 */}
-            {(mgrSalaryType === "base+rate" || mgrSalaryType === "rate") && (
+            {/* 트레이너 배분율 */}
+            {role === "trainer" && (salaryType === "base+rate" || salaryType === "rate") && (
               <>
-                <NumInput label="이번달 매출 (센터 전체 또는 담당)" value={mgrRevenue} onChange={setMgrRevenue} />
+                <NumInput label="이 트레이너의 이번달 PT 매출" value={ptRevenue} onChange={setPt} />
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-zinc-500">매출 배분율</label>
                     <div className="flex items-center gap-1">
-                      <input
-                        type="number" min="1" max="100" value={mgrCommRate}
-                        onChange={(e) => setMgrCommRate(e.target.value)}
-                        className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-amber-600 text-center focus:outline-none focus:border-amber-500"
-                      />
-                      <span className="text-sm font-bold text-amber-600">%</span>
+                      <input type="number" min="1" max="100" value={commRate} onChange={(e) => setComm(e.target.value)}
+                        className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-blue-600 text-center focus:outline-none focus:border-blue-500" />
+                      <span className="text-sm font-bold text-blue-600">%</span>
                     </div>
                   </div>
-                  <input type="range" min="5" max="50" value={mgrCommRate}
-                    onChange={(e) => setMgrCommRate(e.target.value)}
-                    className="w-full accent-amber-500" />
-                  <div className="flex justify-between text-xs text-zinc-400 mt-1">
-                    <span>5%</span><span className="text-amber-600">10~20% 권장</span><span>50%</span>
-                  </div>
+                  <input type="range" min="30" max="70" value={commRate} onChange={(e) => setComm(e.target.value)} className="w-full accent-blue-600" />
+                  <div className="flex justify-between text-xs text-zinc-400 mt-1"><span>30%</span><span className="text-blue-600">40~60% 권장</span><span>70%</span></div>
                 </div>
               </>
             )}
 
-            {/* 고정수업료 구조 */}
-            {mgrSalaryType === "base+fixed" && (
+            {/* 트레이너 고정수업료 */}
+            {role === "trainer" && salaryType === "base+fixed" && (
               <div className="grid grid-cols-2 gap-3">
-                <NumInput label="회당 고정수업료" value={mgrSessionFee} onChange={setMgrFee} />
+                <NumInput label="회당 고정수업료" value={sessionFee} onChange={setFee} />
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">이번달 완료 수업</label>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">완료 수업</label>
                   <div className="relative">
-                    <input type="number" min="0" placeholder="0" value={mgrSessionCount}
-                      onChange={(e) => setMgrCount(e.target.value)}
-                      className={inputCls + " pr-8"} />
+                    <input type="number" min="0" placeholder="0" value={sessionCount} onChange={(e) => setCount(e.target.value)} className={inputCls + " pr-8"} />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">회</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 매출 입력 (진단용) — 배분율 구조는 이미 있음 */}
-            {(mgrSalaryType === "fixed" || mgrSalaryType === "base+fixed") && (
-              <NumInput
-                label="이번달 매출 (인건비 비율 진단용)"
-                value={mgrRevenue}
-                onChange={setMgrRevenue}
-                hint="입력하면 급여가 매출 대비 적정한지 자동 진단"
-              />
+            {/* 매니저 배분율 */}
+            {role === "manager" && (mgrSalaryType === "base+rate" || mgrSalaryType === "rate") && (
+              <>
+                <NumInput label="이번달 매출 (센터 전체 또는 담당)" value={mgrRevenue} onChange={setMgrRevenue} />
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-zinc-500">매출 배분율</label>
+                    <div className="flex items-center gap-1">
+                      <input type="number" min="1" max="100" value={mgrCommRate} onChange={(e) => setMgrCommRate(e.target.value)}
+                        className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-amber-600 text-center focus:outline-none focus:border-amber-500" />
+                      <span className="text-sm font-bold text-amber-600">%</span>
+                    </div>
+                  </div>
+                  <input type="range" min="5" max="50" value={mgrCommRate} onChange={(e) => setMgrCommRate(e.target.value)} className="w-full accent-amber-500" />
+                  <div className="flex justify-between text-xs text-zinc-400 mt-1"><span>5%</span><span className="text-amber-600">10~20% 권장</span><span>50%</span></div>
+                </div>
+              </>
             )}
-          </>
-        )}
-      </div>
 
-      {/* 결과 */}
-      {hasResult && (
-        <div className="space-y-3">
-          {/* 급여 구조 */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-3">
-            <p className="font-bold text-zinc-900 text-sm">급여 구조 내역</p>
-
-            <div className="space-y-2 text-sm">
-              {/* 기본급 표시 (배분율만은 기본급 없음) */}
-              {(role !== "trainer" || salaryType !== "rate") &&
-               (role !== "manager" || mgrSalaryType !== "rate") && (
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">
-                    {role === "trainer" && salaryType !== "base+fixed" ? "기본지원금" :
-                     role === "manager" && mgrSalaryType === "fixed" ? "고정급" : "기본급"}
-                  </span>
-                  <span className="font-semibold text-zinc-800">{formatKRW(base)}</span>
+            {/* 매니저 고정수업료 */}
+            {role === "manager" && mgrSalaryType === "base+fixed" && (
+              <div className="grid grid-cols-2 gap-3">
+                <NumInput label="회당 고정수업료" value={mgrSessionFee} onChange={setMgrFee} />
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">완료 수업</label>
+                  <div className="relative">
+                    <input type="number" min="0" placeholder="0" value={mgrSessionCount} onChange={(e) => setMgrCount(e.target.value)} className={inputCls + " pr-8"} />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">회</span>
+                  </div>
                 </div>
-              )}
-
-              {role === "trainer" && incentive > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">
-                    {salaryType === "base+fixed"
-                      ? `고정수업료 (${count}회 × ${formatKRW(fee)})`
-                      : `PT 인센티브 (${commRate}% 배분)`}
-                  </span>
-                  <span className="font-semibold text-blue-600">{formatKRW(incentive)}</span>
-                </div>
-              )}
-
-              {role === "manager" && incentive > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">
-                    {mgrSalaryType === "base+fixed"
-                      ? `고정수업료 (${Number(mgrSessionCount) || 0}회 × ${formatKRW(parseKorean(mgrSessionFee))})`
-                      : `인센티브 (${mgrCommRate}% 배분)`}
-                  </span>
-                  <span className="font-semibold text-amber-600">{formatKRW(incentive)}</span>
-                </div>
-              )}
-
-              <div className="flex justify-between border-t border-zinc-100 pt-2 font-bold">
-                <span className="text-zinc-700">총 실수령액 (세전)</span>
-                <span className="text-zinc-900">{formatKRW(grossSalary)}</span>
               </div>
+            )}
+
+            {/* 센터 매출 (진단 기준) */}
+            <div className="border-t border-dashed border-zinc-200 pt-4">
+              <NumInput label="📊 이번달 센터 전체 매출" value={centerRevenue} onChange={setCenterRevenue}
+                hint="이 직원 급여가 매출 대비 적정한지 진단합니다" />
             </div>
           </div>
 
-          {/* 사업자 부담 총비용 */}
-          <div className="bg-zinc-900 rounded-2xl p-5 text-white space-y-3">
+          {/* 진단 결과 */}
+          {hasResult && (
+            <div className="space-y-3">
+              {/* 진단 카드 (PRIMARY) */}
+              {cRev > 0 && (() => {
+                const g = diagGrade(diagRatio);
+                if (!g) return null;
+                return (
+                  <div className={`rounded-2xl p-5 space-y-3 ${g.bg}`}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className={`text-base font-black ${g.text}`}>{g.icon} {g.label}</p>
+                        <p className={`text-xs mt-0.5 ${g.text}`}>{g.desc}</p>
+                      </div>
+                      <span className={`text-3xl font-black ${g.text}`}>{diagRatio.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-white/60 rounded-full h-2.5 overflow-hidden">
+                      <div className={`h-2.5 rounded-full ${g.bar}`} style={{ width: `${Math.min(diagRatio, 100)}%` }} />
+                    </div>
+                    <div className="flex justify-between text-xs opacity-60">
+                      <span className={g.text}>0%</span><span className={g.text}>20%</span>
+                      <span className={g.text}>30% 권장</span><span className={g.text}>40% ⚠️</span>
+                    </div>
+                    <div className={`rounded-xl bg-white/50 p-3 text-xs space-y-1.5 ${g.text}`}>
+                      <div className="flex justify-between"><span>직원 세전 실수령</span><span className="font-bold">{formatKRW(grossSalary)}</span></div>
+                      <div className="flex justify-between"><span>사업자 실부담 (4대보험 포함)</span><span className="font-bold">{formatKRW(companyCost)}</span></div>
+                      {diagRatio >= 30 && (
+                        <div className={`mt-1 p-2 rounded-lg bg-white/40 font-semibold`}>
+                          💡 적정 급여 (30% 기준): {formatKRW(cRev * 0.3 / (isFreelancer ? 1 : 1 + INS_RATE))} 세전
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* 매출 미입력 시 급여 내역 */}
+              {cRev === 0 && (
+                <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-2 text-sm">
+                  <p className="font-bold text-zinc-700">급여 내역</p>
+                  {(role !== "trainer" || salaryType !== "rate") && (role !== "manager" || mgrSalaryType !== "rate") && (
+                    <div className="flex justify-between text-zinc-600">
+                      <span>{role === "trainer" && salaryType !== "base+fixed" ? "기본지원금" : role === "manager" && mgrSalaryType === "fixed" ? "고정급" : "기본급"}</span>
+                      <span>{formatKRW(base)}</span>
+                    </div>
+                  )}
+                  {incentive > 0 && <div className="flex justify-between text-blue-600"><span>인센티브</span><span>{formatKRW(incentive)}</span></div>}
+                  <div className="flex justify-between font-bold border-t border-zinc-100 pt-2"><span>세전 실수령</span><span>{formatKRW(grossSalary)}</span></div>
+                  <div className="flex justify-between text-zinc-500"><span>사업자 실부담</span><span className="font-bold text-zinc-800">{formatKRW(companyCost)}</span></div>
+                  <p className="text-xs text-zinc-400 text-center pt-1">↑ 센터 매출 입력 시 적정 여부 자동 진단</p>
+                </div>
+              )}
+
+              {/* 트레이너 구조 분석 */}
+              {role === "trainer" && salaryType !== "base+fixed" && base > 0 && grossSalary > 0 && (
+                <div className="bg-blue-50 rounded-xl p-4 text-xs text-blue-700 space-y-1">
+                  <p className="font-bold">📌 급여 구조 분석</p>
+                  <p>기본지원금 {((base / grossSalary) * 100).toFixed(0)}% / 인센티브 {((incentive / grossSalary) * 100).toFixed(0)}%</p>
+                  <p className={`font-semibold ${incentive / grossSalary > 0.7 ? "text-red-600" : "text-blue-700"}`}>
+                    {incentive / grossSalary > 0.7 ? "⚠️ 인센티브 비중 70% 초과 — 단기 영업 집중 리스크" : "✅ 기본급·인센티브 균형 잡힌 구조"}
+                  </p>
+                </div>
+              )}
+
+              {/* 프리랜서 지급 구조 */}
+              {isFreelancer && (
+                <div className="bg-zinc-900 rounded-2xl p-4 text-white text-sm space-y-1.5">
+                  <p className="text-zinc-400 text-xs mb-1">프리랜서 지급 구조</p>
+                  <div className="flex justify-between text-zinc-300"><span>세전 합의 금액</span><span>{formatKRW(grossSalary)}</span></div>
+                  <div className="flex justify-between text-zinc-400"><span>원천징수 (3.3%)</span><span>− {formatKRW(withholdingTax)}</span></div>
+                  <div className="flex justify-between text-emerald-400 font-semibold"><span>실수령</span><span>{formatKRW(freelancerNet)}</span></div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ══ 신규 채용 급여 책정 모드 ══ */}
+      {mode === "newHire" && (
+        <>
+          <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wide">현재 매출 기준 채용 가능 급여</p>
+
+            <NumInput label="이번달 센터 전체 매출" value={nhRevenue} onChange={setNhRevenue} />
+
             <div>
-              <p className="text-sm text-zinc-400 mb-1">사업자 실부담 총비용</p>
-              <p className="text-3xl font-black">{formatKRW(companyCost)}</p>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-zinc-500">이 직원에게 배정할 인건비 비율</label>
+                <div className="flex items-center gap-1">
+                  <input type="number" min="1" max="60" value={nhRatio} onChange={(e) => setNhRatio2(e.target.value)}
+                    className="w-14 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-blue-600 text-center focus:outline-none focus:border-blue-500" />
+                  <span className="text-sm font-bold text-blue-600">%</span>
+                </div>
+              </div>
+              <input type="range" min="5" max="50" value={nhRatio} onChange={(e) => setNhRatio2(e.target.value)} className="w-full accent-blue-600" />
+              <div className="flex justify-between text-xs text-zinc-400 mt-1">
+                <span>5%</span><span className="text-emerald-600">20% 적정</span><span className="text-yellow-600">30% 한도</span><span className="text-red-500">50%</span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">전체 인건비 합산 30% 이하 권장 (1인 기준 배정 비율)</p>
             </div>
 
-            {/* 프론트 / 정규직 트레이너: 4대보험 추가 구조 */}
-            {!isFreelancer && role !== "manager" && (
-              <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
-                <div className="flex justify-between text-zinc-300">
-                  <span>직원 실수령 (세전)</span>
-                  <span>{formatKRW(grossSalary)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>4대보험+산재 사업자 부담 (10.65%)</span>
-                  <span>+ {formatKRW(grossSalary * INS_RATE)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
-                  <span>국민연금4.5+건강3.545+장기요양0.46+고용1.15+산재1.0</span>
-                </div>
-              </div>
-            )}
-
-            {/* 센터장/팀장: 기본급 + 성과급 + 4대보험 구조 */}
-            {role === "manager" && (
-              <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
-                {mgrSalaryType !== "rate" && (
-                  <div className="flex justify-between text-zinc-300">
-                    <span>{mgrSalaryType === "fixed" ? "고정급" : "기본급"}</span>
-                    <span>{formatKRW(base)}</span>
-                  </div>
-                )}
-                {incentive > 0 && (
-                  <div className="flex justify-between text-amber-400">
-                    <span>
-                      {mgrSalaryType === "base+fixed"
-                        ? `고정수업료 (${Number(mgrSessionCount)||0}회)`
-                        : `인센티브 (${mgrCommRate}% 배분)`}
-                    </span>
-                    <span>+ {formatKRW(incentive)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-zinc-300 font-semibold border-t border-zinc-700 pt-1.5">
-                  <span>총 실수령 소계 (세전)</span>
-                  <span>{formatKRW(grossSalary)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>4대보험+산재 사업자 부담 (10.65%)</span>
-                  <span>+ {formatKRW(grossSalary * INS_RATE)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
-                  <span>국민연금4.5+건강3.545+장기요양0.46+고용1.15+산재1.0</span>
-                </div>
-              </div>
-            )}
-
-            {/* 프리랜서 트레이너: 원천징수 차감 구조 */}
-            {isFreelancer && (
-              <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
-                <div className="flex justify-between text-zinc-300">
-                  <span>세전 합의 금액</span>
-                  <span>{formatKRW(grossSalary)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>원천징수 차감 (3.3%)</span>
-                  <span>− {formatKRW(withholdingTax)}</span>
-                </div>
-                <div className="flex justify-between text-emerald-400 font-semibold">
-                  <span>프리랜서 실수령액</span>
-                  <span>{formatKRW(freelancerNet)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>사업자 → 국세청 원천세 납부</span>
-                  <span>{formatKRW(withholdingTax)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-500 text-xs pt-1 border-t border-zinc-700">
-                  <span>실수령 + 원천세 = 사업자 총지출</span>
-                  <span>{formatKRW(freelancerNet)} + {formatKRW(withholdingTax)} = {formatKRW(companyCost)}</span>
-                </div>
+            {/* 트레이너 시뮬레이션 옵션 */}
+            {role === "trainer" && nhRev > 0 && (
+              <div className="border-t border-dashed border-zinc-200 pt-3 space-y-3">
+                <p className="text-xs font-semibold text-zinc-400">📌 구조 시뮬레이션 (선택)</p>
+                <NumInput label="예상 이 트레이너의 월 PT 매출" value={nhPtRevenue} onChange={setNhPtRevenue} hint="기본급+배분율 구조 계산용" />
+                <NumInput label="제안할 기본지원금" value={nhBase} onChange={setNhBase} hint="통상 50~80만원" />
               </div>
             )}
           </div>
 
-          {/* 인센티브 비율 안내 (트레이너 — 배분율 구조만) */}
-          {role === "trainer" && salaryType !== "base+fixed" && base > 0 && grossSalary > 0 && (
-            <div className="bg-blue-50 rounded-xl p-4 text-xs text-blue-700 space-y-1">
-              <p className="font-bold">📌 트레이너 급여 구조 분석</p>
-              <p>기본급 비중: {((base / grossSalary) * 100).toFixed(0)}% / 인센티브 비중: {((incentive / grossSalary) * 100).toFixed(0)}%</p>
-              <p className={`font-semibold mt-1 ${incentive / grossSalary > 0.7 ? "text-red-600" : "text-blue-700"}`}>
-                {incentive / grossSalary > 0.7
-                  ? "⚠️ 인센티브 비중이 70% 초과 — 단기 영업 집중 리스크가 높습니다"
-                  : "✅ 기본급과 인센티브가 균형 잡힌 구조입니다"}
-              </p>
-            </div>
-          )}
-
-          {/* 매니저 인건비 비율 진단 */}
-          {role === "manager" && parseKorean(mgrRevenue) > 0 && companyCost > 0 && (() => {
-            const rev   = parseKorean(mgrRevenue);
-            const ratio = (companyCost / rev) * 100;
-            const grade =
-              ratio < 20  ? { icon: "✅", label: "매우 적정",  desc: `매출의 ${ratio.toFixed(1)}% — 인건비 부담 낮음`,         bg: "bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-400" } :
-              ratio < 30  ? { icon: "✅", label: "적정",       desc: `매출의 ${ratio.toFixed(1)}% — 업계 권장 범위`,           bg: "bg-blue-50",    text: "text-blue-700",    bar: "bg-blue-400"    } :
-              ratio < 40  ? { icon: "⚠️", label: "주의",       desc: `매출의 ${ratio.toFixed(1)}% — 권장 범위 상단 근접`,      bg: "bg-yellow-50",  text: "text-yellow-700",  bar: "bg-yellow-400"  } :
-                            { icon: "🔴", label: "위험",       desc: `매출의 ${ratio.toFixed(1)}% — 즉각 검토 필요 (40% 초과)`, bg: "bg-red-50",     text: "text-red-700",     bar: "bg-red-400"     };
-            return (
-              <div className={`rounded-2xl p-4 space-y-2 ${grade.bg}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-bold ${grade.text}`}>{grade.icon} 인건비 진단 — {grade.label}</span>
-                  <span className={`text-xl font-black ${grade.text}`}>{ratio.toFixed(1)}%</span>
+          {/* 신규 채용 결과 */}
+          {nhRev > 0 && nhBudget > 0 && (
+            <div className="space-y-3">
+              <div className="bg-zinc-900 rounded-2xl p-5 text-white space-y-3">
+                <div>
+                  <p className="text-xs text-zinc-400 mb-1">사업자 최대 배정 예산</p>
+                  <p className="text-3xl font-black">{formatKRW(nhBudget)}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{formatKRW(nhRev)} × {nhRatio}%</p>
                 </div>
-                <p className={`text-xs ${grade.text}`}>{grade.desc}</p>
-                {/* 비율 바 */}
-                <div className="w-full bg-white/60 rounded-full h-2 overflow-hidden">
-                  <div className={`h-2 rounded-full transition-all ${grade.bar}`} style={{ width: `${Math.min(ratio, 100)}%` }} />
+                <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between text-zinc-300">
+                    <span>직원 최대 세전 실수령</span>
+                    <span className="font-bold text-white">{formatKRW(nhMaxGross)}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>{isFreelancer ? "원천징수 3.3%" : "4대보험+산재 10.65%"}</span>
+                    <span>{isFreelancer ? `− ${formatKRW(nhMaxGross * 0.033)}` : `+ ${formatKRW(nhMaxGross * INS_RATE)}`}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs opacity-60 pt-0.5">
-                  <span className={grade.text}>0%</span>
-                  <span className={grade.text}>20% 우수</span>
-                  <span className={grade.text}>30% 권장</span>
-                  <span className={grade.text}>40% 경고</span>
-                </div>
-                <p className={`text-xs opacity-60 ${grade.text}`}>
-                  사업자 총비용 {formatKRW(companyCost)} ÷ 매출 {formatKRW(rev)}
-                </p>
               </div>
-            );
-          })()}
 
-          {/* 매니저 성과급 기준표 */}
-          {role === "manager" && (
-            <div className="bg-zinc-50 rounded-xl p-4 text-xs text-zinc-600 space-y-1.5">
-              <p className="font-bold text-zinc-700">📋 회원 유지율 성과급 기준표</p>
-              {[
-                { range: "90% 이상", label: "최우수", bonus: "고정급 × 35%", color: "text-emerald-600" },
-                { range: "80~89%",   label: "우수",   bonus: "고정급 × 25%", color: "text-blue-600"    },
-                { range: "70~79%",   label: "양호",   bonus: "고정급 × 15%", color: "text-yellow-600"  },
-                { range: "60~69%",   label: "보통",   bonus: "고정급 × 10%", color: "text-orange-500"  },
-                { range: "60% 미만", label: "미달",   bonus: "성과급 없음",   color: "text-zinc-400"    },
-              ].map((row) => (
-                <div key={row.range} className={`flex justify-between ${Number(retention) >= parseInt(row.range) ? "font-semibold" : ""}`}>
-                  <span>{row.range} ({row.label})</span>
-                  <span className={row.color}>{row.bonus}</span>
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-3">
+                <p className="text-sm font-bold text-zinc-800">📋 급여 구조 예시</p>
+
+                {role === "front" && (
+                  <div className="rounded-xl bg-violet-50 p-3 text-xs text-violet-700 space-y-1">
+                    <p className="font-bold">고정급 구조</p>
+                    <p>월 {formatKRW(nhMaxGross)} (세전) 지급 가능</p>
+                  </div>
+                )}
+
+                {role === "trainer" && (
+                  <div className="space-y-2">
+                    <div className="rounded-xl bg-blue-50 p-3 text-xs text-blue-700 space-y-1">
+                      <p className="font-bold">① 기본지원금 + 배분율 (권장)</p>
+                      {nhPtRev > 0 && nhBaseAmt > 0 ? (() => {
+                        const expectedIncentive = nhMaxGross - nhBaseAmt;
+                        const recRate = Math.round((expectedIncentive / nhPtRev) * 100);
+                        return <><p>기본지원금 {formatKRW(nhBaseAmt)} + PT 매출의 {recRate}% 배분</p><p className="opacity-70">예상 인센티브 {formatKRW(expectedIncentive)} | 합계 {formatKRW(nhMaxGross)}</p></>;
+                      })() : <p>기본지원금 50~80만원 + 나머지를 PT 매출 배분으로 구성 (↑ 예상 매출·기본급 입력 시 배분율 자동 계산)</p>}
+                    </div>
+                    <div className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 space-y-1">
+                      <p className="font-bold">② 순수 배분율</p>
+                      {nhPtRev > 0 ? <p>PT 매출의 {Math.round((nhMaxGross / nhPtRev) * 100)}% 배분 → 월 {formatKRW(nhMaxGross)} (세전)</p> : <p>예상 PT 매출 입력 시 배분율 계산</p>}
+                    </div>
+                    <div className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 space-y-1">
+                      <p className="font-bold">③ 기본급 + 고정수업료</p>
+                      <p>기본급 50만원 + 회당 {formatKRW(Math.round((nhMaxGross - 500000) / 30))} (월 30회 기준)</p>
+                    </div>
+                  </div>
+                )}
+
+                {role === "manager" && (
+                  <div className="space-y-2">
+                    <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-700 space-y-1">
+                      <p className="font-bold">① 고정급 구조</p>
+                      <p>월 {formatKRW(nhMaxGross)} (세전) 고정 지급 가능</p>
+                    </div>
+                    <div className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 space-y-1">
+                      <p className="font-bold">② 기본급 + 매출 배분율</p>
+                      <p>기본급 {formatKRW(Math.round(nhMaxGross * 0.7))} + 센터 매출의 10~20% 성과급</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className={`rounded-xl p-3 text-xs ${Number(nhRatio) <= 20 ? "bg-emerald-50 text-emerald-700" : Number(nhRatio) <= 30 ? "bg-blue-50 text-blue-700" : Number(nhRatio) <= 40 ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700"}`}>
+                  <p className="font-bold">
+                    {Number(nhRatio) <= 20 ? "✅ 채용 여력 충분" : Number(nhRatio) <= 30 ? "✅ 적정 채용 수준" : Number(nhRatio) <= 40 ? "⚠️ 다른 직원 인건비도 합산 확인 필요" : "🔴 1인에게 매출의 40% 이상 — 전체 인건비 점검 필요"}
+                  </p>
+                  <p className="mt-0.5 opacity-80">전체 인건비 합산이 매출의 30%를 초과하지 않도록 관리하세요</p>
                 </div>
-              ))}
-              <p className="text-zinc-400 mt-1">출처: HFA(Health & Fitness Association) 보고서</p>
+              </div>
             </div>
           )}
-        </div>
+
+          {nhRev === 0 && (
+            <p className="text-center text-sm text-zinc-400 py-4">센터 매출을 입력하면 채용 가능 급여가 계산됩니다</p>
+          )}
+        </>
       )}
     </section>
   );
