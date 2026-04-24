@@ -171,7 +171,7 @@ function IndividualCalc() {
   return (
     <section className="space-y-4">
       <div>
-        <p className="text-lg font-black text-zinc-900">직원 개별 급여 계산기</p>
+        <p className="text-lg font-black text-zinc-900">직원 적정 급여 책정기</p>
         <p className="text-xs text-zinc-500 mt-0.5">직무별 고정급 + 성과급 혼합 구조 기반</p>
       </div>
 
