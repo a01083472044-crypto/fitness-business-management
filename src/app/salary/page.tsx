@@ -121,6 +121,7 @@ function IndividualCalc() {
   const [salaryType, setSalaryType]       = useState<SalaryType>(saved?.salaryType ?? "base+rate");
   const [mgrSalaryType, setMgrSalaryType] = useState<ManagerSalaryType>(saved?.mgrSalaryType ?? "fixed");
   const [baseSalary, setBaseRaw]          = useState<string>(saved?.baseSalary ?? "");
+  const [mgrFixedSalary, setMgrFixedRaw] = useState<string>(saved?.mgrFixedSalary ?? "");
   const [ptRevenue, setPtRaw]             = useState<string>(saved?.ptRevenue ?? "");
   const [commRate, setCommRate]           = useState<string>(saved?.commRate ?? "50");
   const [mgrRevenue, setMgrRevenueRaw]    = useState<string>(saved?.mgrRevenue ?? "");
@@ -147,6 +148,7 @@ function IndividualCalc() {
   const setSalType      = (v: SalaryType)       => { setSalaryType(v);     p({ salaryType: v }); };
   const setMgrSalType   = (v: ManagerSalaryType)=> { setMgrSalaryType(v); p({ mgrSalaryType: v }); };
   const setBase         = (v: string)           => { setBaseRaw(v);        p({ baseSalary: v }); };
+  const setMgrFixed     = (v: string)           => { setMgrFixedRaw(v);    p({ mgrFixedSalary: v }); };
   const setPt           = (v: string)           => { setPtRaw(v);          p({ ptRevenue: v }); };
   const setComm         = (v: string)           => { setCommRate(v);       p({ commRate: v }); };
   const setMgrRevenue   = (v: string)           => { setMgrRevenueRaw(v);  p({ mgrRevenue: v }); };
@@ -190,7 +192,7 @@ function IndividualCalc() {
     const mgrFee  = parseKorean(mgrSessionFee);
     const mgrCnt  = Number(mgrSessionCount) || 0;
     if (mgrSalaryType === "fixed") {
-      grossSalary = base;
+      grossSalary = parseKorean(mgrFixedSalary);
     } else if (mgrSalaryType === "base+rate") {
       incentive   = mgrRev * (Number(mgrCommRate) / 100);
       grossSalary = base + incentive;
@@ -315,12 +317,17 @@ function IndividualCalc() {
               </div>
             )}
 
-            {/* 기본급/고정급 */}
+            {/* 매니저 고정급 (별도 상태) */}
+            {role === "manager" && mgrSalaryType === "fixed" && (
+              <NumInput label="고정급 (월)" value={mgrFixedSalary} onChange={setMgrFixed} />
+            )}
+
+            {/* 기본급 (front / trainer / manager base+rate, base+fixed) */}
             {(role === "front" ||
               (role === "trainer" && (salaryType === "base+rate" || salaryType === "base+fixed")) ||
-              (role === "manager" && mgrSalaryType !== "rate")) && (
+              (role === "manager" && (mgrSalaryType === "base+rate" || mgrSalaryType === "base+fixed"))) && (
               <NumInput
-                label={role === "trainer" && salaryType !== "base+fixed" ? "기본지원금 (월)" : role === "manager" && mgrSalaryType === "fixed" ? "고정급 (월)" : "기본급 (월)"}
+                label={role === "trainer" && salaryType !== "base+fixed" ? "기본지원금 (월)" : "기본급 (월)"}
                 value={baseSalary} onChange={setBase}
                 hint={role === "trainer" && salaryType !== "base+fixed" ? "국내 통상 50~80만원 수준" : undefined}
               />
@@ -442,7 +449,7 @@ function IndividualCalc() {
                   {(role !== "trainer" || salaryType !== "rate") && (role !== "manager" || mgrSalaryType !== "rate") && (
                     <div className="flex justify-between text-zinc-600">
                       <span>{role === "trainer" && salaryType !== "base+fixed" ? "기본지원금" : role === "manager" && mgrSalaryType === "fixed" ? "고정급" : "기본급"}</span>
-                      <span>{formatKRW(base)}</span>
+                      <span>{formatKRW(role === "manager" && mgrSalaryType === "fixed" ? parseKorean(mgrFixedSalary) : base)}</span>
                     </div>
                   )}
                   {incentive > 0 && <div className="flex justify-between text-blue-600"><span>인센티브</span><span>{formatKRW(incentive)}</span></div>}
