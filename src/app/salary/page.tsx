@@ -82,8 +82,9 @@ function GradeBar({ ratio }: { ratio: number }) {
 
 // ─── 개별 급여 계산기 ────────────────────────────────────────────────────────
 
-type RoleType = "front" | "trainer" | "manager";
-type EmpType  = "정규직" | "프리랜서";
+type RoleType  = "front" | "trainer" | "manager";
+type EmpType   = "정규직" | "프리랜서";
+type SalaryType = "base+rate" | "rate" | "base+fixed";
 
 const ROLE_INFO = {
   front:   { label: "프론트 데스크 / 운영 스태프", icon: "🖥️", color: "violet" },
@@ -116,26 +117,34 @@ function loadInd() {
 function IndividualCalc() {
   const saved = typeof window !== "undefined" ? loadInd() : null;
 
-  const [role, setRole]         = useState<RoleType>(saved?.role ?? "trainer");
-  const [empType, setEmpType]   = useState<EmpType>(saved?.empType ?? "정규직");
-  const [baseSalary, setBaseRaw]= useState<string>(saved?.baseSalary ?? "");
-  const [ptRevenue, setPtRaw]   = useState<string>(saved?.ptRevenue ?? "");
-  const [commRate, setCommRate] = useState<string>(saved?.commRate ?? "50");
-  const [retention, setRet]     = useState<string>(saved?.retention ?? "75");
+  const [role, setRole]           = useState<RoleType>(saved?.role ?? "trainer");
+  const [empType, setEmpType]     = useState<EmpType>(saved?.empType ?? "정규직");
+  const [salaryType, setSalaryType] = useState<SalaryType>(saved?.salaryType ?? "base+rate");
+  const [baseSalary, setBaseRaw]  = useState<string>(saved?.baseSalary ?? "");
+  const [ptRevenue, setPtRaw]     = useState<string>(saved?.ptRevenue ?? "");
+  const [commRate, setCommRate]   = useState<string>(saved?.commRate ?? "50");
+  const [sessionFee, setFeeRaw]   = useState<string>(saved?.sessionFee ?? "");
+  const [sessionCount, setCountRaw] = useState<string>(saved?.sessionCount ?? "");
+  const [retention, setRet]       = useState<string>(saved?.retention ?? "75");
 
   function p(patch: Record<string, string>) {
     const cur = loadInd() ?? {};
     localStorage.setItem(IND_KEY, JSON.stringify({ ...cur, ...patch }));
   }
 
-  const setRole2 = (v: RoleType)  => { setRole(v);     p({ role: v }); };
-  const setEmp2  = (v: EmpType)   => { setEmpType(v);  p({ empType: v }); };
-  const setBase  = (v: string)    => { setBaseRaw(v);  p({ baseSalary: v }); };
-  const setPt    = (v: string)    => { setPtRaw(v);    p({ ptRevenue: v }); };
-  const setComm  = (v: string)    => { setCommRate(v); p({ commRate: v }); };
-  const setRet2  = (v: string)    => { setRet(v);      p({ retention: v }); };
+  const setRole2      = (v: RoleType)   => { setRole(v);       p({ role: v }); };
+  const setEmp2       = (v: EmpType)    => { setEmpType(v);    p({ empType: v }); };
+  const setSalType    = (v: SalaryType) => { setSalaryType(v); p({ salaryType: v }); };
+  const setBase       = (v: string)     => { setBaseRaw(v);    p({ baseSalary: v }); };
+  const setPt         = (v: string)     => { setPtRaw(v);      p({ ptRevenue: v }); };
+  const setComm       = (v: string)     => { setCommRate(v);   p({ commRate: v }); };
+  const setFee        = (v: string)     => { setFeeRaw(v);     p({ sessionFee: v }); };
+  const setCount      = (v: string)     => { setCountRaw(v);   p({ sessionCount: v }); };
+  const setRet2       = (v: string)     => { setRet(v);        p({ retention: v }); };
 
   const base      = parseKorean(baseSalary);
+  const fee       = parseKorean(sessionFee);
+  const count     = Number(sessionCount) || 0;
   // 프론트/센터장은 항상 정규직 구조, 트레이너만 프리랜서 선택 가능
   const isFreelancer = role === "trainer" && empType === "프리랜서";
 
@@ -145,9 +154,18 @@ function IndividualCalc() {
   if (role === "front") {
     grossSalary = base;
   } else if (role === "trainer") {
-    const rev = parseKorean(ptRevenue);
-    incentive   = rev * (Number(commRate) / 100);
-    grossSalary = base + incentive;
+    if (salaryType === "base+rate") {
+      const rev = parseKorean(ptRevenue);
+      incentive   = rev * (Number(commRate) / 100);
+      grossSalary = base + incentive;
+    } else if (salaryType === "rate") {
+      const rev = parseKorean(ptRevenue);
+      incentive   = rev * (Number(commRate) / 100);
+      grossSalary = incentive;
+    } else { // base+fixed
+      incentive   = count * fee;
+      grossSalary = base + incentive;
+    }
   } else if (role === "manager") {
     incentive   = retentionBonus(base, Number(retention));
     grossSalary = base + incentive;
@@ -241,16 +259,41 @@ function IndividualCalc() {
           </div>
         )}
 
-        {/* 고정급 */}
-        <NumInput
-          label={role === "trainer" ? "기본지원금 (월)" : "고정급 (월)"}
-          value={baseSalary}
-          onChange={setBase}
-          hint={role === "trainer" ? "국내 통상 50~80만원 수준" : undefined}
-        />
-
-        {/* PT 트레이너 전용 */}
+        {/* 급여 구조 선택 (트레이너) */}
         {role === "trainer" && (
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 mb-2">급여 구조</p>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { key: "base+rate",  label: "기본급\n+배분율"    },
+                { key: "rate",       label: "배분율\n만"          },
+                { key: "base+fixed", label: "기본급\n+고정수업료" },
+              ] as { key: SalaryType; label: string }[]).map(({ key, label }) => (
+                <button key={key} type="button" onClick={() => setSalType(key)}
+                  className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${
+                    salaryType === key
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 기본급 (base+rate, base+fixed) */}
+        {(role !== "trainer" || salaryType === "base+rate" || salaryType === "base+fixed") && (
+          <NumInput
+            label={role === "trainer" ? (salaryType === "base+fixed" ? "기본급 (월)" : "기본지원금 (월)") : "고정급 (월)"}
+            value={baseSalary}
+            onChange={setBase}
+            hint={role === "trainer" && salaryType !== "base+fixed" ? "국내 통상 50~80만원 수준" : undefined}
+          />
+        )}
+
+        {/* PT 트레이너 — 배분율 구조 */}
+        {role === "trainer" && (salaryType === "base+rate" || salaryType === "rate") && (
           <>
             <NumInput label="이 트레이너의 이번달 PT 매출" value={ptRevenue} onChange={setPt} />
             <div>
@@ -267,6 +310,22 @@ function IndividualCalc() {
               </div>
             </div>
           </>
+        )}
+
+        {/* PT 트레이너 — 고정수업료 구조 */}
+        {role === "trainer" && salaryType === "base+fixed" && (
+          <div className="grid grid-cols-2 gap-3">
+            <NumInput label="회당 고정수업료" value={sessionFee} onChange={setFee} />
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 mb-1.5">이번달 완료 수업</label>
+              <div className="relative">
+                <input type="number" min="0" placeholder="0" value={sessionCount}
+                  onChange={(e) => setCount(e.target.value)}
+                  className={inputCls + " pr-8"} />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">회</span>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* 센터장 전용 */}
@@ -316,7 +375,11 @@ function IndividualCalc() {
 
               {role === "trainer" && incentive > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">PT 인센티브 ({commRate}% 배분)</span>
+                  <span className="text-zinc-500">
+                    {salaryType === "base+fixed"
+                      ? `고정수업료 (${count}회 × ${formatKRW(fee)})`
+                      : `PT 인센티브 (${commRate}% 배분)`}
+                  </span>
                   <span className="font-semibold text-blue-600">{formatKRW(incentive)}</span>
                 </div>
               )}
@@ -413,8 +476,8 @@ function IndividualCalc() {
             )}
           </div>
 
-          {/* 인센티브 비율 안내 (트레이너) */}
-          {role === "trainer" && base > 0 && grossSalary > 0 && (
+          {/* 인센티브 비율 안내 (트레이너 — 배분율 구조만) */}
+          {role === "trainer" && salaryType !== "base+fixed" && base > 0 && grossSalary > 0 && (
             <div className="bg-blue-50 rounded-xl p-4 text-xs text-blue-700 space-y-1">
               <p className="font-bold">📌 트레이너 급여 구조 분석</p>
               <p>기본급 비중: {((base / grossSalary) * 100).toFixed(0)}% / 인센티브 비중: {((incentive / grossSalary) * 100).toFixed(0)}%</p>
