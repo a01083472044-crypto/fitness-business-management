@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, syncPaymentFeeToCosts, calcPaymentFee, PAYMENT_FEE_RATES, Member, SessionPackage, Trainer, PaymentMethod, formatManwon } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, syncPaymentFeeToCosts, calcPaymentFee, CARD_FEE_TIERS, Member, SessionPackage, Trainer, PaymentMethod, formatManwon } from "../lib/store";
 
 function parseKorean(input: string): number {
   if (!input) return 0;
@@ -48,6 +48,8 @@ export default function MembersPage() {
   const [form, setForm] = useState<Member>(empty());
   const [paymentInput, setPaymentInput] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
+  const [cardFeeRate, setCardFeeRate] = useState<number>(0.4);
+  const [cardFeeRateInput, setCardFeeRateInput] = useState<string>("0.4");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -92,6 +94,8 @@ export default function MembersPage() {
     setForm(empty());
     setPaymentInput("");
     setPaymentMethod("");
+    setCardFeeRate(0.4);
+    setCardFeeRateInput("0.4");
     setEditingId(null);
     setShowForm(true);
   };
@@ -100,7 +104,14 @@ export default function MembersPage() {
     setForm({ ...m });
     setPaymentInput(String(m.totalPayment || ""));
     // 첫 번째 패키지의 결제 수단 불러오기
-    setPaymentMethod((m.packages?.[0]?.paymentMethod) ?? "");
+    const pkg0 = m.packages?.[0];
+    setPaymentMethod(pkg0?.paymentMethod ?? "");
+    // 기존 수수료율 역산 (paymentFee / paymentAmount * 100)
+    const savedRate = pkg0?.paymentMethod === "카드" && pkg0.paymentAmount > 0
+      ? Math.round(pkg0.paymentFee / pkg0.paymentAmount * 10000) / 100
+      : 0.4;
+    setCardFeeRate(savedRate);
+    setCardFeeRateInput(String(savedRate));
     setEditingId(m.id);
     setShowForm(true);
   };
@@ -112,7 +123,7 @@ export default function MembersPage() {
   };
 
   // 수수료 계산
-  const fee    = calcPaymentFee(form.totalPayment, paymentMethod);
+  const fee    = calcPaymentFee(form.totalPayment, paymentMethod, cardFeeRate);
   const netAmt = form.totalPayment - fee;
 
   // 회원 저장 시 수업 관리 자동 연동
@@ -398,25 +409,63 @@ export default function MembersPage() {
               )}
             </Field>
             {/* 결제 수단 */}
-            <div>
-              <label className="block text-xs font-semibold text-zinc-500 mb-2">결제 수단</label>
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold text-zinc-500">결제 수단</label>
               <div className="grid grid-cols-3 gap-2">
                 {(["카드", "현금", "지역화폐"] as PaymentMethod[]).map((m) => (
                   <button key={m} type="button"
                     onClick={() => setPaymentMethod(paymentMethod === m ? "" : m)}
                     className={`py-2.5 rounded-xl text-sm font-semibold border transition ${
                       paymentMethod === m
-                        ? m === "카드"    ? "bg-blue-600 text-white border-blue-600"
-                        : m === "현금"   ? "bg-emerald-500 text-white border-emerald-500"
+                        ? m === "카드"     ? "bg-blue-600 text-white border-blue-600"
+                        : m === "현금"    ? "bg-emerald-500 text-white border-emerald-500"
                         : "bg-purple-500 text-white border-purple-500"
                         : "bg-white text-zinc-500 border-zinc-200"
                     }`}>
-                    {m === "카드" ? `💳 카드 (${PAYMENT_FEE_RATES["카드"]}%)`
-                     : m === "현금" ? "💵 현금"
-                     : "🏷️ 지역화폐"}
+                    {m === "카드" ? "💳 카드" : m === "현금" ? "💵 현금" : "🏷️ 지역화폐"}
                   </button>
                 ))}
               </div>
+
+              {/* 카드 수수료율 — 연매출 구간 선택 */}
+              {paymentMethod === "카드" && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-semibold text-blue-700">카드 수수료율 (여신금융협회 2026 기준)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CARD_FEE_TIERS.filter((tier) => tier.rate > 0).map((tier) => (
+                      <button key={tier.rate} type="button"
+                        onClick={() => { setCardFeeRate(tier.rate); setCardFeeRateInput(String(tier.rate)); }}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                          cardFeeRate === tier.rate
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-blue-700 border-blue-200 hover:border-blue-400"
+                        }`}>
+                        {tier.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* 직접 입력 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-blue-600 font-medium whitespace-nowrap">직접 입력</span>
+                    <div className="flex items-center gap-1 flex-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="10"
+                        value={cardFeeRateInput}
+                        onChange={(e) => {
+                          setCardFeeRateInput(e.target.value);
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v >= 0) setCardFeeRate(v);
+                        }}
+                        className="w-20 rounded-lg border border-blue-200 bg-white px-2 py-1.5 text-sm text-zinc-900 focus:outline-none focus:border-blue-500 text-right"
+                      />
+                      <span className="text-xs text-blue-600 font-semibold">%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Field label="총 결제금액">
@@ -439,7 +488,7 @@ export default function MembersPage() {
                   <p className="text-xs font-medium text-blue-500">결제액: {form.totalPayment.toLocaleString()}원</p>
                   {fee > 0 && (
                     <p className="text-xs font-medium text-red-400">
-                      수수료 ({PAYMENT_FEE_RATES[paymentMethod!]}%): -{fee.toLocaleString()}원
+                      수수료 ({cardFeeRate}%): -{fee.toLocaleString()}원
                     </p>
                   )}
                   <p className={`text-sm font-bold ${fee > 0 ? "text-emerald-600" : "text-blue-600"}`}>

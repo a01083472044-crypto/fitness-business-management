@@ -19,16 +19,28 @@ export interface ScheduleEntry {
 // ── 결제 수단 ──────────────────────────────────────────────────────────────
 export type PaymentMethod = "카드" | "현금" | "지역화폐" | "";
 
-// 결제 수단별 수수료율 (%)
+// 결제 수단별 수수료율 (%) — 카드는 연매출 구간별 상이, 기본값 0.4%(영세가맹점)
 export const PAYMENT_FEE_RATES: Record<string, number> = {
-  "카드":    2.0,  // 카드 수수료 2.0%
-  "현금":    0,    // 현금 수수료 없음
-  "지역화폐": 0,   // 지역화폐 가맹점 수수료 0%
+  "카드":    0.4,  // 기본값: 영세가맹점(연매출 3억 이하) 신용카드 수수료
+  "현금":    0,
+  "지역화폐": 0,
 };
 
-export function calcPaymentFee(amount: number, method: PaymentMethod): number {
+// 카드 수수료 연매출 구간별 공식 요율 (2026년 상반기 여신금융협회 기준)
+export const CARD_FEE_TIERS: { label: string; rate: number }[] = [
+  { label: "영세 (3억↓) 0.4%",   rate: 0.4  },
+  { label: "중소1 (5억↓) 1.0%",  rate: 1.0  },
+  { label: "중소2 (10억↓) 1.15%", rate: 1.15 },
+  { label: "중소3 (30억↓) 1.45%", rate: 1.45 },
+  { label: "일반 (30억↑) 직접입력", rate: 0 },
+];
+
+export function calcPaymentFee(amount: number, method: PaymentMethod, cardRate?: number): number {
   if (!method) return 0;
-  return Math.round(amount * (PAYMENT_FEE_RATES[method] ?? 0) / 100);
+  const rate = method === "카드"
+    ? (cardRate ?? PAYMENT_FEE_RATES["카드"])
+    : (PAYMENT_FEE_RATES[method] ?? 0);
+  return Math.round(amount * rate / 100);
 }
 
 // ── PT 패키지 ──────────────────────────────────────────────────────────────
