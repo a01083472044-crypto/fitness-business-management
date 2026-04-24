@@ -434,6 +434,16 @@ function IndividualCalc() {
                 </div>
               </div>
             )}
+
+            {/* 매출 입력 (진단용) — 배분율 구조는 이미 있음 */}
+            {(mgrSalaryType === "fixed" || mgrSalaryType === "base+fixed") && (
+              <NumInput
+                label="이번달 매출 (인건비 비율 진단용)"
+                value={mgrRevenue}
+                onChange={setMgrRevenue}
+                hint="입력하면 급여가 매출 대비 적정한지 자동 진단"
+              />
+            )}
           </>
         )}
       </div>
@@ -583,6 +593,39 @@ function IndividualCalc() {
               </p>
             </div>
           )}
+
+          {/* 매니저 인건비 비율 진단 */}
+          {role === "manager" && parseKorean(mgrRevenue) > 0 && companyCost > 0 && (() => {
+            const rev   = parseKorean(mgrRevenue);
+            const ratio = (companyCost / rev) * 100;
+            const grade =
+              ratio < 20  ? { icon: "✅", label: "매우 적정",  desc: `매출의 ${ratio.toFixed(1)}% — 인건비 부담 낮음`,         bg: "bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-400" } :
+              ratio < 30  ? { icon: "✅", label: "적정",       desc: `매출의 ${ratio.toFixed(1)}% — 업계 권장 범위`,           bg: "bg-blue-50",    text: "text-blue-700",    bar: "bg-blue-400"    } :
+              ratio < 40  ? { icon: "⚠️", label: "주의",       desc: `매출의 ${ratio.toFixed(1)}% — 권장 범위 상단 근접`,      bg: "bg-yellow-50",  text: "text-yellow-700",  bar: "bg-yellow-400"  } :
+                            { icon: "🔴", label: "위험",       desc: `매출의 ${ratio.toFixed(1)}% — 즉각 검토 필요 (40% 초과)`, bg: "bg-red-50",     text: "text-red-700",     bar: "bg-red-400"     };
+            return (
+              <div className={`rounded-2xl p-4 space-y-2 ${grade.bg}`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-sm font-bold ${grade.text}`}>{grade.icon} 인건비 진단 — {grade.label}</span>
+                  <span className={`text-xl font-black ${grade.text}`}>{ratio.toFixed(1)}%</span>
+                </div>
+                <p className={`text-xs ${grade.text}`}>{grade.desc}</p>
+                {/* 비율 바 */}
+                <div className="w-full bg-white/60 rounded-full h-2 overflow-hidden">
+                  <div className={`h-2 rounded-full transition-all ${grade.bar}`} style={{ width: `${Math.min(ratio, 100)}%` }} />
+                </div>
+                <div className="flex justify-between text-xs opacity-60 pt-0.5">
+                  <span className={grade.text}>0%</span>
+                  <span className={grade.text}>20% 우수</span>
+                  <span className={grade.text}>30% 권장</span>
+                  <span className={grade.text}>40% 경고</span>
+                </div>
+                <p className={`text-xs opacity-60 ${grade.text}`}>
+                  사업자 총비용 {formatKRW(companyCost)} ÷ 매출 {formatKRW(rev)}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* 매니저 성과급 기준표 */}
           {role === "manager" && (
