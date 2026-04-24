@@ -335,7 +335,7 @@ export default function MembersPage() {
       {/* 폼 모달 */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl p-6 w-full max-w-lg mx-0 sm:mx-4 space-y-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl p-6 w-full max-w-lg mx-0 sm:mx-4 space-y-4 max-h-[90vh] overflow-y-auto">
             <p className="font-bold text-zinc-900 text-lg">
               {editingId ? "회원 수정" : "회원 추가"}
             </p>
