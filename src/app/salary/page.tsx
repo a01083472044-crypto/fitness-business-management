@@ -85,6 +85,7 @@ function GradeBar({ ratio }: { ratio: number }) {
 type RoleType  = "front" | "trainer" | "manager";
 type EmpType   = "정규직" | "프리랜서";
 type SalaryType = "base+rate" | "rate" | "base+fixed";
+type ManagerSalaryType = "fixed" | "base+rate" | "rate" | "base+fixed";
 
 const ROLE_INFO = {
   front:   { label: "프론트 데스크 / 운영 스태프", icon: "🖥️", color: "violet" },
@@ -119,28 +120,38 @@ function IndividualCalc() {
 
   const [role, setRole]           = useState<RoleType>(saved?.role ?? "trainer");
   const [empType, setEmpType]     = useState<EmpType>(saved?.empType ?? "정규직");
-  const [salaryType, setSalaryType] = useState<SalaryType>(saved?.salaryType ?? "base+rate");
-  const [baseSalary, setBaseRaw]  = useState<string>(saved?.baseSalary ?? "");
-  const [ptRevenue, setPtRaw]     = useState<string>(saved?.ptRevenue ?? "");
-  const [commRate, setCommRate]   = useState<string>(saved?.commRate ?? "50");
-  const [sessionFee, setFeeRaw]   = useState<string>(saved?.sessionFee ?? "");
-  const [sessionCount, setCountRaw] = useState<string>(saved?.sessionCount ?? "");
-  const [retention, setRet]       = useState<string>(saved?.retention ?? "75");
+  const [salaryType, setSalaryType]       = useState<SalaryType>(saved?.salaryType ?? "base+rate");
+  const [mgrSalaryType, setMgrSalaryType] = useState<ManagerSalaryType>(saved?.mgrSalaryType ?? "fixed");
+  const [baseSalary, setBaseRaw]          = useState<string>(saved?.baseSalary ?? "");
+  const [ptRevenue, setPtRaw]             = useState<string>(saved?.ptRevenue ?? "");
+  const [commRate, setCommRate]           = useState<string>(saved?.commRate ?? "50");
+  const [mgrRevenue, setMgrRevenueRaw]    = useState<string>(saved?.mgrRevenue ?? "");
+  const [mgrCommRate, setMgrCommRateRaw]  = useState<string>(saved?.mgrCommRate ?? "50");
+  const [sessionFee, setFeeRaw]           = useState<string>(saved?.sessionFee ?? "");
+  const [sessionCount, setCountRaw]       = useState<string>(saved?.sessionCount ?? "");
+  const [mgrSessionFee, setMgrFeeRaw]     = useState<string>(saved?.mgrSessionFee ?? "");
+  const [mgrSessionCount, setMgrCountRaw] = useState<string>(saved?.mgrSessionCount ?? "");
+  const [retention, setRet]               = useState<string>(saved?.retention ?? "75");
 
   function p(patch: Record<string, string>) {
     const cur = loadInd() ?? {};
     localStorage.setItem(IND_KEY, JSON.stringify({ ...cur, ...patch }));
   }
 
-  const setRole2      = (v: RoleType)   => { setRole(v);       p({ role: v }); };
-  const setEmp2       = (v: EmpType)    => { setEmpType(v);    p({ empType: v }); };
-  const setSalType    = (v: SalaryType) => { setSalaryType(v); p({ salaryType: v }); };
-  const setBase       = (v: string)     => { setBaseRaw(v);    p({ baseSalary: v }); };
-  const setPt         = (v: string)     => { setPtRaw(v);      p({ ptRevenue: v }); };
-  const setComm       = (v: string)     => { setCommRate(v);   p({ commRate: v }); };
-  const setFee        = (v: string)     => { setFeeRaw(v);     p({ sessionFee: v }); };
-  const setCount      = (v: string)     => { setCountRaw(v);   p({ sessionCount: v }); };
-  const setRet2       = (v: string)     => { setRet(v);        p({ retention: v }); };
+  const setRole2        = (v: RoleType)         => { setRole(v);           p({ role: v }); };
+  const setEmp2         = (v: EmpType)          => { setEmpType(v);        p({ empType: v }); };
+  const setSalType      = (v: SalaryType)       => { setSalaryType(v);     p({ salaryType: v }); };
+  const setMgrSalType   = (v: ManagerSalaryType)=> { setMgrSalaryType(v); p({ mgrSalaryType: v }); };
+  const setBase         = (v: string)           => { setBaseRaw(v);        p({ baseSalary: v }); };
+  const setPt           = (v: string)           => { setPtRaw(v);          p({ ptRevenue: v }); };
+  const setComm         = (v: string)           => { setCommRate(v);       p({ commRate: v }); };
+  const setMgrRevenue   = (v: string)           => { setMgrRevenueRaw(v);  p({ mgrRevenue: v }); };
+  const setMgrCommRate  = (v: string)           => { setMgrCommRateRaw(v); p({ mgrCommRate: v }); };
+  const setFee          = (v: string)           => { setFeeRaw(v);         p({ sessionFee: v }); };
+  const setCount        = (v: string)           => { setCountRaw(v);       p({ sessionCount: v }); };
+  const setMgrFee       = (v: string)           => { setMgrFeeRaw(v);      p({ mgrSessionFee: v }); };
+  const setMgrCount     = (v: string)           => { setMgrCountRaw(v);    p({ mgrSessionCount: v }); };
+  const setRet2         = (v: string)           => { setRet(v);            p({ retention: v }); };
 
   const base      = parseKorean(baseSalary);
   const fee       = parseKorean(sessionFee);
@@ -167,8 +178,21 @@ function IndividualCalc() {
       grossSalary = base + incentive;
     }
   } else if (role === "manager") {
-    incentive   = retentionBonus(base, Number(retention));
-    grossSalary = base + incentive;
+    const mgrRev  = parseKorean(mgrRevenue);
+    const mgrFee  = parseKorean(mgrSessionFee);
+    const mgrCnt  = Number(mgrSessionCount) || 0;
+    if (mgrSalaryType === "fixed") {
+      grossSalary = base;
+    } else if (mgrSalaryType === "base+rate") {
+      incentive   = mgrRev * (Number(mgrCommRate) / 100);
+      grossSalary = base + incentive;
+    } else if (mgrSalaryType === "rate") {
+      incentive   = mgrRev * (Number(mgrCommRate) / 100);
+      grossSalary = incentive;
+    } else { // base+fixed
+      incentive   = mgrCnt * mgrFee;
+      grossSalary = base + incentive;
+    }
   }
 
   // ✅ 정확한 사업자 실부담 계산
@@ -328,33 +352,69 @@ function IndividualCalc() {
           </div>
         )}
 
-        {/* 센터장 전용 */}
+        {/* 센터장 — 급여 구조 선택 */}
         {role === "manager" && (
-          <div>
-            <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
-              이번달 회원 유지율 (Retention Rate): <span className="text-amber-600 font-bold">{retention}%</span>
-            </label>
-            <input type="range" min="40" max="100" value={retention}
-              onChange={(e) => setRet2(e.target.value)}
-              className="w-full accent-amber-500" />
-            <div className="flex justify-between text-xs text-zinc-400 mt-1">
-              <span>40%</span>
-              <span className="text-yellow-600">70% 양호</span>
-              <span className="text-emerald-600">90% 최우수</span>
-              <span>100%</span>
+          <>
+            <div>
+              <p className="text-xs font-semibold text-zinc-500 mb-2">급여 구조</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { key: "fixed",      label: "고정급" },
+                  { key: "base+rate",  label: "기본급\n+배분율" },
+                  { key: "rate",       label: "배분율\n만" },
+                  { key: "base+fixed", label: "기본급\n+고정수업료" },
+                ] as { key: ManagerSalaryType; label: string }[]).map(({ key, label }) => (
+                  <button key={key} type="button" onClick={() => setMgrSalType(key)}
+                    className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${
+                      mgrSalaryType === key
+                        ? "bg-amber-500 text-white border-amber-500"
+                        : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-            {/* 유지율 등급 표시 */}
-            <div className={`mt-2 rounded-lg px-3 py-2 flex items-center justify-between text-xs font-semibold ${
-              retGrade.color === "emerald" ? "bg-emerald-50 text-emerald-700" :
-              retGrade.color === "blue"    ? "bg-blue-50 text-blue-700"       :
-              retGrade.color === "yellow"  ? "bg-yellow-50 text-yellow-700"   :
-              retGrade.color === "orange"  ? "bg-orange-50 text-orange-700"   :
-                                             "bg-zinc-100 text-zinc-500"
-            }`}>
-              <span>유지율 {retention}% → {retGrade.label}</span>
-              <span>{retGrade.bonus}</span>
-            </div>
-          </div>
+
+            {/* 기본급 (fixed, base+rate, base+fixed) */}
+            {mgrSalaryType !== "rate" && (
+              <NumInput label="기본급 (월)" value={baseSalary} onChange={setBase} />
+            )}
+
+            {/* 배분율 구조 */}
+            {(mgrSalaryType === "base+rate" || mgrSalaryType === "rate") && (
+              <>
+                <NumInput label="이번달 매출 (센터 전체 또는 담당)" value={mgrRevenue} onChange={setMgrRevenue} />
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">
+                    매출 배분율: <span className="text-amber-600 font-bold">{mgrCommRate}%</span>
+                  </label>
+                  <input type="range" min="5" max="50" value={mgrCommRate}
+                    onChange={(e) => setMgrCommRate(e.target.value)}
+                    className="w-full accent-amber-500" />
+                  <div className="flex justify-between text-xs text-zinc-400 mt-1">
+                    <span>5%</span><span className="text-amber-600">10~20% 권장</span><span>50%</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* 고정수업료 구조 */}
+            {mgrSalaryType === "base+fixed" && (
+              <div className="grid grid-cols-2 gap-3">
+                <NumInput label="회당 고정수업료" value={mgrSessionFee} onChange={setMgrFee} />
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1.5">이번달 완료 수업</label>
+                  <div className="relative">
+                    <input type="number" min="0" placeholder="0" value={mgrSessionCount}
+                      onChange={(e) => setMgrCount(e.target.value)}
+                      className={inputCls + " pr-8"} />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">회</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -366,12 +426,16 @@ function IndividualCalc() {
             <p className="font-bold text-zinc-900 text-sm">급여 구조 내역</p>
 
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">
-                  {role === "trainer" ? "기본지원금" : "고정급"}
-                </span>
-                <span className="font-semibold text-zinc-800">{formatKRW(base)}</span>
-              </div>
+              {/* 기본급 표시 (배분율만은 기본급 없음) */}
+              {(role !== "trainer" || salaryType !== "rate") &&
+               (role !== "manager" || mgrSalaryType !== "rate") && (
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">
+                    {role === "trainer" && salaryType !== "base+fixed" ? "기본지원금" : "기본급"}
+                  </span>
+                  <span className="font-semibold text-zinc-800">{formatKRW(base)}</span>
+                </div>
+              )}
 
               {role === "trainer" && incentive > 0 && (
                 <div className="flex justify-between">
@@ -386,7 +450,11 @@ function IndividualCalc() {
 
               {role === "manager" && incentive > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">성과급 (유지율 {retention}%)</span>
+                  <span className="text-zinc-500">
+                    {mgrSalaryType === "base+fixed"
+                      ? `고정수업료 (${Number(mgrSessionCount) || 0}회 × ${formatKRW(parseKorean(mgrSessionFee))})`
+                      : `인센티브 (${mgrCommRate}% 배분)`}
+                  </span>
                   <span className="font-semibold text-amber-600">{formatKRW(incentive)}</span>
                 </div>
               )}
@@ -425,13 +493,19 @@ function IndividualCalc() {
             {/* 센터장/팀장: 기본급 + 성과급 + 4대보험 구조 */}
             {role === "manager" && (
               <div className="border-t border-zinc-700 pt-3 space-y-1.5 text-sm">
-                <div className="flex justify-between text-zinc-300">
-                  <span>고정급</span>
-                  <span>{formatKRW(base)}</span>
-                </div>
+                {mgrSalaryType !== "rate" && (
+                  <div className="flex justify-between text-zinc-300">
+                    <span>기본급</span>
+                    <span>{formatKRW(base)}</span>
+                  </div>
+                )}
                 {incentive > 0 && (
                   <div className="flex justify-between text-amber-400">
-                    <span>성과급 (유지율 {retention}% · {retGrade.bonus})</span>
+                    <span>
+                      {mgrSalaryType === "base+fixed"
+                        ? `고정수업료 (${Number(mgrSessionCount)||0}회)`
+                        : `인센티브 (${mgrCommRate}% 배분)`}
+                    </span>
                     <span>+ {formatKRW(incentive)}</span>
                   </div>
                 )}
