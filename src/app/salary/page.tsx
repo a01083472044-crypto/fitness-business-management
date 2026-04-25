@@ -295,7 +295,7 @@ function IndividualCalc() {
             className={`rounded-xl border p-3 text-center transition ${role === key ? "border-blue-500 bg-blue-50" : "border-zinc-200 bg-white hover:bg-zinc-50"}`}>
             <p className="text-xl mb-1">{info.icon}</p>
             <p className={`text-xs font-bold leading-tight ${role === key ? "text-blue-700" : "text-zinc-600"}`}>
-              {key === "front" ? "프론트 데스크\nFC" : key === "trainer" ? trainerLabel : "지점장·매니저\n팀장"}
+              {key === "front" ? "프론트 데스크\nFC" : key === "trainer" ? trainerLabel : "지점장·매니저\n·팀장"}
             </p>
           </button>
         ))}
