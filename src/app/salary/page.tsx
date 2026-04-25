@@ -124,7 +124,7 @@ function IndividualCalc() {
   const [mgrFixedSalary, setMgrFixedRaw] = useState<string>(saved?.mgrFixedSalary ?? "");
   const [ptRevenue, setPtRaw]             = useState<string>(saved?.ptRevenue ?? "");
   const [commRate, setCommRate]           = useState<string>(saved?.commRate ?? "50");
-  const [mgrRevenue, setMgrRevenueRaw]    = useState<string>(saved?.mgrRevenue ?? "");
+  const [mgrRevenue, setMgrRevenueRaw]    = useState<string>(saved?.mgrBonusRev ?? "");
   const [mgrCommRate, setMgrCommRateRaw]  = useState<string>(saved?.mgrCommRate ?? "50");
   const [sessionFee, setFeeRaw]           = useState<string>(saved?.sessionFee ?? "");
   const [sessionCount, setCountRaw]       = useState<string>(saved?.sessionCount ?? "");
@@ -151,7 +151,7 @@ function IndividualCalc() {
   const setMgrFixed     = (v: string)           => { setMgrFixedRaw(v);    p({ mgrFixedSalary: v }); };
   const setPt           = (v: string)           => { setPtRaw(v);          p({ ptRevenue: v }); };
   const setComm         = (v: string)           => { setCommRate(v);       p({ commRate: v }); };
-  const setMgrRevenue   = (v: string)           => { setMgrRevenueRaw(v);  p({ mgrRevenue: v }); };
+  const setMgrRevenue   = (v: string)           => { setMgrRevenueRaw(v);  p({ mgrBonusRev: v }); };
   const setMgrCommRate  = (v: string)           => { setMgrCommRateRaw(v); p({ mgrCommRate: v }); };
   const setFee          = (v: string)           => { setFeeRaw(v);         p({ sessionFee: v }); };
   const setCount        = (v: string)           => { setCountRaw(v);       p({ sessionCount: v }); };
