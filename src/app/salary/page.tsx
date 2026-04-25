@@ -117,10 +117,22 @@ function loadInd() {
 
 function IndividualCalc() {
   const { staffTerm } = useStaffTerm();
+
+  // staffTerm별 아이콘 매핑
+  const trainerIconMap: Record<string, string> = {
+    "트레이너": "🏋️",
+    "강사":     "🧘",
+    "코치":     "💪",
+    "프로":     "⛳",
+  };
+  const trainerIcon = trainerIconMap[staffTerm] ?? "👤";
+  // 트레이너일 때만 "PT" 접두어, 나머지는 그냥 호칭
+  const trainerLabel = staffTerm === "트레이너" ? `PT ${staffTerm}` : staffTerm;
+
   const ROLE_INFO = {
-    front:   { ...ROLE_INFO_BASE.front,   label: "프론트 데스크 / FC" },
-    trainer: { ...ROLE_INFO_BASE.trainer, label: `PT ${staffTerm}`    },
-    manager: { ...ROLE_INFO_BASE.manager, label: "센터장 / 팀장"      },
+    front:   { ...ROLE_INFO_BASE.front,                       label: "프론트 데스크 / FC" },
+    trainer: { ...ROLE_INFO_BASE.trainer, icon: trainerIcon,  label: trainerLabel         },
+    manager: { ...ROLE_INFO_BASE.manager,                     label: "센터장 / 팀장"      },
   };
   const saved = typeof window !== "undefined" ? loadInd() : null;
 
@@ -283,7 +295,7 @@ function IndividualCalc() {
             className={`rounded-xl border p-3 text-center transition ${role === key ? "border-blue-500 bg-blue-50" : "border-zinc-200 bg-white hover:bg-zinc-50"}`}>
             <p className="text-xl mb-1">{info.icon}</p>
             <p className={`text-xs font-bold leading-tight ${role === key ? "text-blue-700" : "text-zinc-600"}`}>
-              {key === "front" ? "프론트 데스크\nFC" : key === "trainer" ? `PT\n${staffTerm}` : "센터장\n팀장"}
+              {key === "front" ? "프론트 데스크\nFC" : key === "trainer" ? trainerLabel : "센터장\n팀장"}
             </p>
           </button>
         ))}
