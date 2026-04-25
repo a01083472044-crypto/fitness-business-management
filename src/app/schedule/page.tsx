@@ -151,10 +151,24 @@ export default function SchedulePage() {
     [trainers, selectedBranch]
   );
 
-  // 선택 회원의 패키지
+  // 선택된 트레이너 객체
+  const selectedFormTrainer = useMemo(
+    () => trainers.find((t) => t.id === formTrainerId),
+    [trainers, formTrainerId]
+  );
+
+  // 담당 트레이너 기준으로 필터된 회원 목록
+  const filteredMembersByTrainer = useMemo(() => {
+    if (!selectedFormTrainer) return members;
+    return members.filter((m) => m.trainer === selectedFormTrainer.name);
+  }, [members, selectedFormTrainer]);
+
+  // 선택 회원의 패키지 (회차 미설정 포함)
   const memberPackages = useMemo(() => {
     const m = members.find((mb) => mb.id === formMemberId);
-    return (m?.packages ?? []).filter((p) => p.totalSessions - p.conductedSessions > 0);
+    return (m?.packages ?? []).filter(
+      (p) => p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0
+    );
   }, [members, formMemberId]);
 
   // ── 셀 조회 ──────────────────────────────────────────────────────────────
@@ -583,7 +597,12 @@ export default function SchedulePage() {
             {/* 트레이너 */}
             <Field label={`담당 ${staffTerm}`}>
               <select value={formTrainerId}
-                onChange={(e) => setFormTrainerId(e.target.value)} className={inputCls}>
+                onChange={(e) => {
+                  setFormTrainerId(e.target.value);
+                  // 트레이너 변경 시 회원·패키지 초기화
+                  setFormMemberId("");
+                  setFormPackageId("");
+                }} className={inputCls}>
                 <option value="">{staffTerm} 선택</option>
                 {activeTrainers.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -600,18 +619,35 @@ export default function SchedulePage() {
               )}
             </Field>
 
-            {/* 회원 */}
+            {/* 회원 — 담당 트레이너 기준 필터 + 패키지명 표시 */}
             <Field label="회원">
               <select value={formMemberId}
                 onChange={(e) => { setFormMemberId(e.target.value); setFormPackageId(""); }}
                 className={inputCls}>
                 <option value="">회원 선택</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}{m.phone ? ` (${m.phone})` : ""}
-                  </option>
-                ))}
+                {filteredMembersByTrainer.map((m) => {
+                  // 진행 중인 패키지 중 첫 번째 표시
+                  const activePkg = (m.packages ?? []).find(
+                    (p) => p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0
+                  );
+                  const pkgLabel = activePkg ? activePkg.name : null;
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.name}{pkgLabel ? ` (${pkgLabel})` : m.phone ? ` (${m.phone})` : ""}
+                    </option>
+                  );
+                })}
               </select>
+              {formTrainerId && filteredMembersByTrainer.length === 0 && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  💡 이 {staffTerm}에게 배정된 회원이 없습니다
+                </p>
+              )}
+              {!formTrainerId && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  담당 {staffTerm}를 먼저 선택하면 해당 회원만 표시됩니다
+                </p>
+              )}
             </Field>
 
             {/* 패키지 연동 */}
