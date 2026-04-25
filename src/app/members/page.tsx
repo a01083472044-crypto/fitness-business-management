@@ -56,6 +56,8 @@ export default function MembersPage() {
   const [showForm, setShowForm] = useState(false);
   const [classType, setClassType] = useState<ClassType>("1:1");
   const [groupSize, setGroupSize] = useState<number>(2);
+  const [groupDirect, setGroupDirect] = useState(false);
+  const [groupSizeText, setGroupSizeText] = useState("");
 
   useEffect(() => {
     setMembers(getMembers());
@@ -102,6 +104,8 @@ export default function MembersPage() {
     setCardFeeRateInput("0.4");
     setClassType("1:1");
     setGroupSize(2);
+    setGroupDirect(false);
+    setGroupSizeText("");
     setEditingId(null);
     setShowForm(true);
   };
@@ -118,8 +122,12 @@ export default function MembersPage() {
       : 0.4;
     setCardFeeRate(savedRate);
     setCardFeeRateInput(String(savedRate));
+    const gs = pkg0?.groupSize ?? 2;
     setClassType(pkg0?.classType ?? "1:1");
-    setGroupSize(pkg0?.groupSize ?? 2);
+    setGroupSize(gs);
+    const presetSizes = [2, 3, 4, 5, 6, 7, 8];
+    setGroupDirect(!presetSizes.includes(gs));
+    setGroupSizeText(!presetSizes.includes(gs) ? String(gs) : "");
     setEditingId(m.id);
     setShowForm(true);
   };
@@ -449,16 +457,44 @@ export default function MembersPage() {
                   <div className="flex gap-1.5 flex-wrap">
                     {[2, 3, 4, 5, 6, 7, 8].map((n) => (
                       <button key={n} type="button"
-                        onClick={() => setGroupSize(n)}
+                        onClick={() => { setGroupSize(n); setGroupDirect(false); setGroupSizeText(""); }}
                         className={`w-10 h-10 rounded-xl text-sm font-bold border transition ${
-                          groupSize === n
+                          !groupDirect && groupSize === n
                             ? "bg-purple-600 text-white border-purple-600"
                             : "bg-white text-purple-700 border-purple-200 hover:border-purple-400"
                         }`}>
                         {n}
                       </button>
                     ))}
+                    <button type="button"
+                      onClick={() => { setGroupDirect(true); setGroupSizeText(groupDirect ? groupSizeText : ""); }}
+                      className={`px-3 h-10 rounded-xl text-sm font-bold border transition ${
+                        groupDirect
+                          ? "bg-purple-600 text-white border-purple-600"
+                          : "bg-white text-purple-700 border-purple-200 hover:border-purple-400"
+                      }`}>
+                      직접입력
+                    </button>
                   </div>
+                  {groupDirect && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={2}
+                        max={100}
+                        placeholder="인원 수 입력"
+                        value={groupSizeText}
+                        onChange={(e) => {
+                          setGroupSizeText(e.target.value);
+                          const v = parseInt(e.target.value);
+                          if (!isNaN(v) && v >= 2) setGroupSize(v);
+                        }}
+                        className="w-28 rounded-xl border border-purple-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-purple-500 text-center font-bold"
+                        autoFocus
+                      />
+                      <span className="text-sm text-purple-700 font-semibold">명</span>
+                    </div>
+                  )}
                   <p className="text-xs text-purple-600">현재: {groupSize}명 동시 수업</p>
                 </div>
               )}
