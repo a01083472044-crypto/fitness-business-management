@@ -626,14 +626,18 @@ export default function SchedulePage() {
                 className={inputCls}>
                 <option value="">회원 선택</option>
                 {filteredMembersByTrainer.map((m) => {
-                  // 진행 중인 패키지 중 첫 번째 표시
                   const activePkg = (m.packages ?? []).find(
                     (p) => p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0
                   );
-                  const pkgLabel = activePkg ? activePkg.name : null;
+                  // 수업 유형 라벨: "1:1 PT" 또는 "그룹 N:1"
+                  const typeLabel = activePkg
+                    ? activePkg.classType === "그룹"
+                      ? `그룹 ${activePkg.groupSize}:1`
+                      : "1:1 PT"
+                    : null;
                   return (
                     <option key={m.id} value={m.id}>
-                      {m.name}{pkgLabel ? ` (${pkgLabel})` : m.phone ? ` (${m.phone})` : ""}
+                      {m.name}{typeLabel ? ` (${typeLabel})` : m.phone ? ` (${m.phone})` : ""}
                     </option>
                   );
                 })}
