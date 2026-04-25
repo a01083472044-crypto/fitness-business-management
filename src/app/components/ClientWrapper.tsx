@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { StaffTermProvider } from "../context/StaffTermContext";
 import Nav from "./Nav";
 
 function AppShell({ children }: { children: React.ReactNode }) {
@@ -74,7 +75,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AppShell>{children}</AppShell>
+      <StaffTermProvider>
+        <AppShell>{children}</AppShell>
+      </StaffTermProvider>
     </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, Member, SessionPackage, Trainer } from "../lib/store";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 function formatKRW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
@@ -83,6 +84,7 @@ function emptyPkg(member?: Member, trainers?: Trainer[]): Partial<SessionPackage
 }
 
 export default function SessionsPage() {
+  const { staffTerm } = useStaffTerm();
   const [members, setMembers]       = useState<Member[]>([]);
   const [trainers, setTrainers]     = useState<Trainer[]>([]);
   const [savedBranches, setSavedBranches] = useState<string[]>([]);
@@ -482,16 +484,16 @@ export default function SessionsPage() {
             </Field>
 
             {/* 담당 트레이너 */}
-            <Field label="담당 트레이너">
+            <Field label={`담당 ${staffTerm}`}>
               {trainers.length > 0 ? (
                 <select value={trainerName} onChange={(e) => handleTrainerSelect(e.target.value)} className={inputCls}>
-                  <option value="">트레이너 선택</option>
+                  <option value="">{staffTerm} 선택</option>
                   {trainers.map((t) => (
                     <option key={t.id} value={t.name}>{t.name} ({t.empType})</option>
                   ))}
                 </select>
               ) : (
-                <input type="text" placeholder="트레이너 이름" value={trainerName}
+                <input type="text" placeholder={`${staffTerm} 이름`} value={trainerName}
                   onChange={(e) => setTrainerName(e.target.value)} className={inputCls} />
               )}
               <div className="flex gap-2 mt-2">

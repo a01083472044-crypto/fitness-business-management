@@ -6,6 +6,7 @@ import {
   emptyCosts, currentMonth,
   Member, ScheduleEntry, MonthlyCosts, Trainer,
 } from "../lib/store";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 const INS_RATE = 0.1065;
 
@@ -94,6 +95,7 @@ function calcTrainerProfit(trainer: Trainer, schedules: ScheduleEntry[], members
 }
 
 export default function ReportPage() {
+  const { staffTerm } = useStaffTerm();
   const months = useMemo(() => getLast6Months(), []);
   const [members, setMembers]   = useState<Member[]>([]);
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
@@ -313,7 +315,7 @@ export default function ReportPage() {
             {/* 트레이너별 기여도 요약 */}
             {focus.trainerResults.length > 0 && (
               <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-3">
-                <p className="text-xs font-bold text-zinc-400">트레이너별 순기여이익</p>
+                <p className="text-xs font-bold text-zinc-400">{staffTerm}별 순기여이익</p>
                 <div className="space-y-2">
                   {focus.trainerResults
                     .filter((r) => r.ptRevenue > 0)

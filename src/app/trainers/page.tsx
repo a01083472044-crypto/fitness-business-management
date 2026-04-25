@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getTrainers, saveTrainers, getBranches, saveBranches, Trainer, SalaryType } from "../lib/store";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 const inputCls =
   "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm";
@@ -37,6 +38,7 @@ function emptyTrainer(): Trainer {
 type FilterType = "전체" | "재직" | "퇴사";
 
 export default function TrainersPage() {
+  const { staffTerm } = useStaffTerm();
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [savedBranches, setSavedBranches] = useState<string[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
@@ -78,7 +80,7 @@ export default function TrainersPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("트레이너를 삭제하시겠습니까?")) {
+    if (confirm(`${staffTerm}를 삭제하시겠습니까?`)) {
       persist(trainers.filter((t) => t.id !== id));
     }
   };
@@ -117,8 +119,8 @@ export default function TrainersPage() {
         {/* 헤더 */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-zinc-900">트레이너 관리</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">재직 트레이너 현황 및 고용 형태 관리</p>
+            <h1 className="text-2xl font-black text-zinc-900">{staffTerm} 관리</h1>
+            <p className="text-sm text-zinc-500 mt-0.5">재직 {staffTerm} 현황 및 고용 형태 관리</p>
           </div>
           <button
             onClick={openAdd}
@@ -188,10 +190,10 @@ export default function TrainersPage() {
         {filtered.length === 0 ? (
           <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
             {selectedBranch !== "전체"
-              ? <><strong>{selectedBranch}</strong>에 {filter === "재직" ? "재직 중인 " : ""}트레이너가 없습니다.</>
-              : filter === "재직" ? "재직 중인 트레이너가 없습니다." : "해당 트레이너가 없습니다."
+              ? <><strong>{selectedBranch}</strong>에 {filter === "재직" ? "재직 중인 " : ""}{staffTerm}가 없습니다.</>
+              : filter === "재직" ? `재직 중인 ${staffTerm}가 없습니다.` : `해당 ${staffTerm}가 없습니다.`
             }<br />
-            <button onClick={openAdd} className="mt-3 text-blue-500 font-semibold">+ 트레이너 등록하기</button>
+            <button onClick={openAdd} className="mt-3 text-blue-500 font-semibold">+ {staffTerm} 등록하기</button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -284,7 +286,7 @@ export default function TrainersPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl p-6 w-full max-w-lg mx-0 sm:mx-4 space-y-4 max-h-[90vh] overflow-y-auto">
             <p className="font-bold text-zinc-900 text-lg">
-              {editingId ? "트레이너 수정" : "트레이너 등록"}
+              {editingId ? `${staffTerm} 수정` : `${staffTerm} 등록`}
             </p>
 
             {/* 고용 형태 */}
@@ -409,7 +411,7 @@ export default function TrainersPage() {
             <Field label="이름" required>
               <input
                 type="text"
-                placeholder="트레이너 이름"
+                placeholder={`${staffTerm} 이름`}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className={inputCls}

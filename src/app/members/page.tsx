@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, syncPaymentFeeToCosts, calcPaymentFee, CARD_FEE_TIERS, Member, SessionPackage, Trainer, PaymentMethod, formatManwon } from "../lib/store";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 function parseKorean(input: string): number {
   if (!input) return 0;
@@ -40,6 +41,7 @@ function formatKRW(n: number) {
 }
 
 export default function MembersPage() {
+  const { staffTerm } = useStaffTerm();
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -252,7 +254,7 @@ export default function MembersPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <p className="text-xs text-zinc-400">{m.trainer || "트레이너 미지정"}</p>
+                      <p className="text-xs text-zinc-400">{m.trainer || `${staffTerm} 미지정`}</p>
                       {m.trainerType && (
                         <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
                           m.trainerType === "정규직"
@@ -358,7 +360,7 @@ export default function MembersPage() {
                 className={inputCls}
               />
             </Field>
-            <Field label="담당 트레이너">
+            <Field label={`담당 ${staffTerm}`}>
               {trainers.length > 0 ? (
                 /* 트레이너 관리에 등록된 트레이너가 있으면 드롭다운 */
                 <select
@@ -366,7 +368,7 @@ export default function MembersPage() {
                   onChange={(e) => handleTrainerSelect(e.target.value)}
                   className={inputCls}
                 >
-                  <option value="">트레이너 선택</option>
+                  <option value="">{staffTerm} 선택</option>
                   {trainers.map((t) => (
                     <option key={t.id} value={t.name}>
                       {t.name} ({t.empType}{t.branch ? ` · ${t.branch}` : ""})
@@ -377,7 +379,7 @@ export default function MembersPage() {
                 /* 트레이너 미등록 시 텍스트 입력 */
                 <input
                   type="text"
-                  placeholder="트레이너 이름 (트레이너 관리에서 먼저 등록하세요)"
+                  placeholder={`${staffTerm} 이름 (${staffTerm} 관리에서 먼저 등록하세요)`}
                   value={form.trainer}
                   onChange={(e) => setForm({ ...form, trainer: e.target.value })}
                   className={inputCls}
@@ -404,7 +406,7 @@ export default function MembersPage() {
               </div>
               {trainers.length === 0 && (
                 <p className="mt-1 text-xs text-zinc-400">
-                  💡 트레이너 관리 페이지에서 등록하면 드롭다운으로 선택할 수 있습니다
+                  💡 {staffTerm} 관리 페이지에서 등록하면 드롭다운으로 선택할 수 있습니다
                 </p>
               )}
             </Field>

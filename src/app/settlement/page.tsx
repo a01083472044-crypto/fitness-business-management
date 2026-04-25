@@ -6,6 +6,7 @@ import {
   getCosts, saveCosts, emptyCosts, getBranches,
   Trainer, TrainerSettlement, ScheduleEntry, Member,
 } from "../lib/store";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 const INS_RATE = 0.1065;
 
@@ -95,6 +96,7 @@ function salaryTypeLabel(t: Trainer) {
 }
 
 export default function SettlementPage() {
+  const { staffTerm } = useStaffTerm();
   const months = useMemo(() => getMonths(), []);
   const [selMonth, setSelMonth] = useState(months[0]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -227,7 +229,7 @@ export default function SettlementPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-zinc-900">급여 정산</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">트레이너별 월간 급여 자동 계산 및 정산</p>
+            <p className="text-sm text-zinc-500 mt-0.5">{staffTerm}별 월간 급여 자동 계산 및 정산</p>
           </div>
           {settledCount < totalCount && totalCount > 0 && (
             <button onClick={settleAll}
@@ -297,8 +299,8 @@ export default function SettlementPage() {
         {activeTrainers.length === 0 ? (
           <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
             {selectedBranch === "전체"
-              ? "재직 중인 트레이너가 없습니다."
-              : <><strong>{selectedBranch}</strong>에 재직 중인 트레이너가 없습니다.</>}
+              ? `재직 중인 ${staffTerm}가 없습니다.`
+              : <><strong>{selectedBranch}</strong>에 재직 중인 {staffTerm}가 없습니다.</>}
           </div>
         ) : (
           <div className="space-y-4">
@@ -343,7 +345,7 @@ export default function SettlementPage() {
 
                   {noSalarySet && !rec && (
                     <div className="bg-amber-50 rounded-xl px-3 py-2 text-xs text-amber-700">
-                      ⚠️ 급여 구조가 설정되지 않았습니다. 트레이너 관리에서 설정해 주세요.
+                      ⚠️ 급여 구조가 설정되지 않았습니다. {staffTerm} 관리에서 설정해 주세요.
                     </div>
                   )}
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getTrainers, getSchedules, getMembers, getBranches, Trainer, ScheduleEntry, Member } from "../lib/store";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 const INS_RATE = 0.1065;
 
@@ -67,6 +68,7 @@ function grade(ratio: number, hasData: boolean) {
 }
 
 export default function ProfitPage() {
+  const { staffTerm } = useStaffTerm();
   const months = useMemo(() => getMonths(), []);
   const [month, setMonth] = useState(months[0]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -113,7 +115,7 @@ export default function ProfitPage() {
         {/* 헤더 */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-zinc-900">트레이너 수익 기여도</h1>
+            <h1 className="text-2xl font-black text-zinc-900">{staffTerm} 수익 기여도</h1>
             <p className="text-sm text-zinc-500 mt-0.5">매출 · 인건비 · 순기여이익 분석</p>
           </div>
           <select value={month} onChange={(e) => setMonth(e.target.value)}
@@ -180,7 +182,7 @@ export default function ProfitPage() {
         {/* 트레이너 없음 */}
         {results.length === 0 && (
           <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
-            재직 중인 트레이너가 없습니다
+            재직 중인 {staffTerm}가 없습니다
           </div>
         )}
 
@@ -217,7 +219,7 @@ export default function ProfitPage() {
 
               {r.ptRevenue === 0 ? (
                 <p className="text-xs text-zinc-400 text-center py-3 bg-white/60 rounded-xl">
-                  이번 달 완료된 수업 기록이 없습니다
+                  이번 달 완료된 수업 기록이 없습니다 (수업 스케줄에서 완료 처리 필요)
                 </p>
               ) : (
                 <>
@@ -262,7 +264,7 @@ export default function ProfitPage() {
                   )}
                   {r.netContribution < 0 && (
                     <div className="bg-red-100 rounded-xl p-3 text-xs text-red-700 font-semibold">
-                      ⚠️ 이 트레이너의 인건비가 발생 매출을 초과합니다
+                      ⚠️ 이 {staffTerm}의 인건비가 발생 매출을 초과합니다
                     </div>
                   )}
                 </>
