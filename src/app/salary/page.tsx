@@ -360,7 +360,7 @@ function IndividualCalc() {
               (role === "trainer" && (salaryType === "base+rate" || salaryType === "base+fixed")) ||
               (role === "manager" && (mgrSalaryType === "base+rate" || mgrSalaryType === "base+fixed"))) && (
               <NumInput
-                label={role === "trainer" && salaryType !== "base+fixed" ? "기본지원금 (월)" : "기본급 (월)"}
+                label={role === "front" && frontSalaryType === "fixed" ? "고정급 (월)" : role === "trainer" && salaryType !== "base+fixed" ? "기본지원금 (월)" : "기본급 (월)"}
                 value={baseSalary} onChange={setBase}
                 hint={role === "trainer" && salaryType !== "base+fixed" ? "국내 통상 50~80만원 수준" : undefined}
               />
