@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 function formatKRW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
@@ -88,10 +89,11 @@ type SalaryType = "base+rate" | "rate" | "base+fixed";
 type ManagerSalaryType = "fixed" | "base+rate" | "rate" | "base+fixed";
 type FrontSalaryType  = "fixed" | "base+rate" | "rate";
 
-const ROLE_INFO = {
-  front:   { label: "프론트 데스크 / 운영 스태프", icon: "🖥️", color: "violet" },
-  trainer: { label: "PT 트레이너",                  icon: "🏋️", color: "blue"   },
-  manager: { label: "센터장 / 팀장",                icon: "👔", color: "amber"  },
+// trainer label은 컴포넌트 내에서 staffTerm으로 동적 생성
+const ROLE_INFO_BASE = {
+  front:   { icon: "🖥️", color: "violet" },
+  trainer: { icon: "🏋️", color: "blue"   },
+  manager: { icon: "👔", color: "amber"  },
 };
 
 type CalcMode = "diagnose" | "newHire";
@@ -114,6 +116,12 @@ function loadInd() {
 }
 
 function IndividualCalc() {
+  const { staffTerm } = useStaffTerm();
+  const ROLE_INFO = {
+    front:   { ...ROLE_INFO_BASE.front,   label: "프론트 데스크 / FC" },
+    trainer: { ...ROLE_INFO_BASE.trainer, label: `PT ${staffTerm}`    },
+    manager: { ...ROLE_INFO_BASE.manager, label: "센터장 / 팀장"      },
+  };
   const saved = typeof window !== "undefined" ? loadInd() : null;
 
   const [mode, setMode]           = useState<CalcMode>(saved?.mode ?? "diagnose");
@@ -270,12 +278,12 @@ function IndividualCalc() {
 
       {/* 역할 선택 (공통) */}
       <div className="grid grid-cols-3 gap-2">
-        {(Object.entries(ROLE_INFO) as [RoleType, typeof ROLE_INFO.front][]).map(([key, info]) => (
+        {(Object.entries(ROLE_INFO) as [RoleType, { label: string; icon: string; color: string }][]).map(([key, info]) => (
           <button key={key} onClick={() => setRole2(key)}
             className={`rounded-xl border p-3 text-center transition ${role === key ? "border-blue-500 bg-blue-50" : "border-zinc-200 bg-white hover:bg-zinc-50"}`}>
             <p className="text-xl mb-1">{info.icon}</p>
             <p className={`text-xs font-bold leading-tight ${role === key ? "text-blue-700" : "text-zinc-600"}`}>
-              {key === "front" ? "프론트 데스크\nFC" : key === "trainer" ? "PT\n트레이너" : "센터장\n팀장"}
+              {key === "front" ? "프론트 데스크\nFC" : key === "trainer" ? `PT\n${staffTerm}` : "센터장\n팀장"}
             </p>
           </button>
         ))}
