@@ -394,7 +394,7 @@ export default function ReportPage() {
           <p className="font-semibold text-zinc-500">📌 계산 기준</p>
           <p>· 매출: 완료 수업 기준 패키지 회당 단가 합산</p>
           <p>· 비용: 비용관리 페이지 입력값 (4대보험·원천징수 포함)</p>
-          <p>· 트레이너 기여도: 발생 매출 − 사업자 실부담</p>
+          <p>· {staffTerm} 기여도: 발생 매출 − 사업자 실부담</p>
         </div>
       </div>
     </div>
