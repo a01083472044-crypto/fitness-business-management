@@ -6,6 +6,7 @@ import {
   getTrainers, syncMemberTotals, getBranches, saveBranches,
   ScheduleEntry, Member, Trainer,
 } from "../lib/store";
+import { useStaffTerm } from "../context/StaffTermContext";
 
 // ── 상수 ───────────────────────────────────────────────────────────────────
 const TIME_SLOTS = Array.from({ length: 16 }, (_, i) =>
@@ -63,6 +64,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ── 메인 페이지 ────────────────────────────────────────────────────────────
 export default function SchedulePage() {
+  const { staffTerm } = useStaffTerm();
   const today = useMemo(() => new Date(), []);
 
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
@@ -274,7 +276,7 @@ export default function SchedulePage() {
         <div className="max-w-lg mx-auto px-2 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-zinc-900">스케줄 관리</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">트레이너별 주간 수업 일정</p>
+            <p className="text-sm text-zinc-500 mt-0.5">{staffTerm}별 주간 수업 일정</p>
           </div>
           <button
             onClick={() => openAdd(selectedDate, "09:00")}
@@ -385,13 +387,13 @@ export default function SchedulePage() {
             <div className="bg-white rounded-2xl border border-zinc-100 p-8 text-center text-zinc-400 text-sm">
               {selectedBranch === "전체" ? (
                 <>
-                  <p>재직 중인 트레이너가 없습니다.</p>
-                  <p className="mt-1 text-xs">트레이너 관리 페이지에서 먼저 등록해주세요.</p>
+                  <p>재직 중인 {staffTerm}가 없습니다.</p>
+                  <p className="mt-1 text-xs">{staffTerm} 관리 페이지에서 먼저 등록해주세요.</p>
                 </>
               ) : (
                 <>
-                  <p><strong>{selectedBranch}</strong>에 소속된 트레이너가 없습니다.</p>
-                  <p className="mt-1 text-xs">트레이너 관리에서 근무 지점을 확인해주세요.</p>
+                  <p><strong>{selectedBranch}</strong>에 소속된 {staffTerm}가 없습니다.</p>
+                  <p className="mt-1 text-xs">{staffTerm} 관리에서 근무 지점을 확인해주세요.</p>
                 </>
               )}
             </div>
@@ -570,10 +572,10 @@ export default function SchedulePage() {
             </div>
 
             {/* 트레이너 */}
-            <Field label="담당 트레이너">
+            <Field label={`담당 ${staffTerm}`}>
               <select value={formTrainerId}
                 onChange={(e) => setFormTrainerId(e.target.value)} className={inputCls}>
-                <option value="">트레이너 선택</option>
+                <option value="">{staffTerm} 선택</option>
                 {activeTrainers.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name} ({t.empType}{t.branch ? ` · ${t.branch}` : ""})
@@ -583,8 +585,8 @@ export default function SchedulePage() {
               {activeTrainers.length === 0 && (
                 <p className="mt-1 text-xs text-zinc-400">
                   {selectedBranch === "전체"
-                    ? "💡 트레이너 관리에서 먼저 등록하세요"
-                    : `💡 ${selectedBranch}에 소속된 트레이너가 없습니다`}
+                    ? `💡 ${staffTerm} 관리에서 먼저 등록하세요`
+                    : `💡 ${selectedBranch}에 소속된 ${staffTerm}가 없습니다`}
                 </p>
               )}
             </Field>
