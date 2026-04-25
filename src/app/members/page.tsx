@@ -81,13 +81,20 @@ export default function MembersPage() {
     ? members
     : members.filter((m) => trainerBranchMap[m.trainer] === selectedBranch);
 
-  // 트레이너 선택 시 고용형태 자동 반영
+  // 트레이너 선택 시 고용형태 + 기존 패키지 trainerName 동시 반영
   const handleTrainerSelect = (name: string) => {
     const found = trainers.find((t) => t.name === name);
+    const newType = found ? found.empType : form.trainerType;
     setForm({
       ...form,
       trainer: name,
-      trainerType: found ? found.empType : form.trainerType,
+      trainerType: newType,
+      // 기존 패키지의 담당자도 함께 업데이트 (수업 관리 연동 핵심)
+      packages: (form.packages ?? []).map((p) => ({
+        ...p,
+        trainerName: name,
+        trainerType: newType,
+      })),
     });
   };
 
@@ -168,8 +175,20 @@ export default function MembersPage() {
       const existing = members.find((m) => m.id === editingId);
       const existingPkgs = existing?.packages ?? [];
       let updated = { ...form };
+
       if (existingPkgs.length === 0 && hasSessionData) {
+        // 패키지 없는 회원 → 신규 패키지 자동 생성
         updated = syncMemberTotals({ ...updated, packages: [buildAutoPackage(form)] });
+      } else if (existingPkgs.length > 0 && existing?.trainer !== form.trainer) {
+        // 강사가 바뀌었으면 기존 패키지들의 trainerName도 일괄 업데이트
+        updated = {
+          ...updated,
+          packages: (updated.packages ?? []).map((p) => ({
+            ...p,
+            trainerName: form.trainer,
+            trainerType: form.trainerType,
+          })),
+        };
       }
       finalMembers = members.map((m) => (m.id === editingId ? updated : m));
     } else {

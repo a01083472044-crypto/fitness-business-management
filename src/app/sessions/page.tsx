@@ -150,8 +150,14 @@ export default function SessionsPage() {
   // 필터 적용
   const filtered = useMemo(() => {
     let list = branchPackages;
-    if (filter === "진행중") list = list.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions > 0);
-    if (filter === "완료")   list = list.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions === 0);
+    // totalSessions=0 은 회차 미설정 상태 → 진행중으로 분류 (완료 아님)
+    if (filter === "진행중") list = list.filter((v) => {
+      const remain = v.pkg.totalSessions - v.pkg.conductedSessions;
+      return remain > 0 || v.pkg.totalSessions === 0;
+    });
+    if (filter === "완료") list = list.filter((v) =>
+      v.pkg.totalSessions > 0 && v.pkg.totalSessions - v.pkg.conductedSessions === 0
+    );
     if (trainerFilter !== "전체") list = list.filter((v) => v.pkg.trainerName === trainerFilter);
     // 잔여 적은 것부터 정렬
     return [...list].sort((a, b) => {
@@ -161,13 +167,17 @@ export default function SessionsPage() {
     });
   }, [branchPackages, filter, trainerFilter]);
 
-  // 통계 (지점 필터 기준)
-  const active   = branchPackages.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions > 0).length;
-  const done     = branchPackages.filter((v) => v.pkg.totalSessions - v.pkg.conductedSessions === 0).length;
-  const urgent   = branchPackages.filter((v) => {
-    const r = v.pkg.totalSessions - v.pkg.conductedSessions;
-    return r === 0;
+  // 통계 (지점 필터 기준) — totalSessions=0은 진행중 처리
+  const active   = branchPackages.filter((v) => {
+    const remain = v.pkg.totalSessions - v.pkg.conductedSessions;
+    return remain > 0 || v.pkg.totalSessions === 0;
   }).length;
+  const done     = branchPackages.filter((v) =>
+    v.pkg.totalSessions > 0 && v.pkg.totalSessions - v.pkg.conductedSessions === 0
+  ).length;
+  const urgent   = branchPackages.filter((v) =>
+    v.pkg.totalSessions > 0 && v.pkg.totalSessions - v.pkg.conductedSessions === 0
+  ).length;
   const lowAlert = branchPackages.filter((v) => {
     const r = v.pkg.totalSessions - v.pkg.conductedSessions;
     return r > 0 && r <= 3;
