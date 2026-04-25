@@ -44,11 +44,15 @@ export function calcPaymentFee(amount: number, method: PaymentMethod, cardRate?:
 }
 
 // ── PT 패키지 ──────────────────────────────────────────────────────────────
+export type ClassType = "1:1" | "그룹";
+
 export interface SessionPackage {
   id: string;
   name: string;              // 수업명 (예: "홍성은 수업")
   trainerName: string;       // 담당 트레이너
   trainerType: "정규직" | "프리랜서" | "";
+  classType: ClassType;      // 수업 유형: 1:1 또는 그룹
+  groupSize: number;         // 그룹 인원 (2~8, 1:1이면 1)
   totalSessions: number;     // 결제 회차
   conductedSessions: number; // 진행 회차
   paymentAmount: number;     // 결제 금액 (원래 결제액)
@@ -173,7 +177,14 @@ export function getMembers(): Member[] {
   try {
     const raw = JSON.parse(localStorage.getItem(MEMBERS_KEY) || "[]");
     // 기존 데이터 호환: packages 필드 없으면 빈 배열 주입
-    return raw.map((m: Member) => ({ ...m, packages: m.packages ?? [] }));
+    return raw.map((m: Member) => ({
+      ...m,
+      packages: (m.packages ?? []).map((p: SessionPackage) => ({
+        ...p,
+        classType: p.classType ?? "1:1",
+        groupSize: p.groupSize ?? 1,
+      })),
+    }));
   } catch { return []; }
 }
 

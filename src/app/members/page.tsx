@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, syncPaymentFeeToCosts, calcPaymentFee, CARD_FEE_TIERS, Member, SessionPackage, Trainer, PaymentMethod, formatManwon } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, syncPaymentFeeToCosts, calcPaymentFee, CARD_FEE_TIERS, Member, SessionPackage, Trainer, PaymentMethod, ClassType, formatManwon } from "../lib/store";
 import { useStaffTerm } from "../context/StaffTermContext";
 
 function parseKorean(input: string): number {
@@ -54,6 +54,8 @@ export default function MembersPage() {
   const [cardFeeRateInput, setCardFeeRateInput] = useState<string>("0.4");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [classType, setClassType] = useState<ClassType>("1:1");
+  const [groupSize, setGroupSize] = useState<number>(2);
 
   useEffect(() => {
     setMembers(getMembers());
@@ -98,6 +100,8 @@ export default function MembersPage() {
     setPaymentMethod("");
     setCardFeeRate(0.4);
     setCardFeeRateInput("0.4");
+    setClassType("1:1");
+    setGroupSize(2);
     setEditingId(null);
     setShowForm(true);
   };
@@ -114,6 +118,8 @@ export default function MembersPage() {
       : 0.4;
     setCardFeeRate(savedRate);
     setCardFeeRateInput(String(savedRate));
+    setClassType(pkg0?.classType ?? "1:1");
+    setGroupSize(pkg0?.groupSize ?? 2);
     setEditingId(m.id);
     setShowForm(true);
   };
@@ -134,6 +140,8 @@ export default function MembersPage() {
     name: `${m.name} 수업`,
     trainerName: m.trainer,
     trainerType: m.trainerType,
+    classType,
+    groupSize: classType === "1:1" ? 1 : groupSize,
     totalSessions: m.totalSessions,
     conductedSessions: m.conductedSessions,
     paymentAmount: m.totalPayment,
@@ -311,12 +319,19 @@ export default function MembersPage() {
                         <div key={pkg.id} className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs ${
                           remain === 0 ? "bg-red-50" : remain <= 3 ? "bg-orange-50" : "bg-zinc-50"
                         }`}>
-                          <span className="font-medium text-zinc-700 truncate max-w-[60%]">{pkg.name}</span>
-                          <span className={`font-bold flex-shrink-0 ${
-                            remain === 0 ? "text-red-500" : remain <= 3 ? "text-orange-500" : "text-zinc-500"
-                          }`}>
-                            {remain === 0 ? "🔴 완료" : remain <= 3 ? `⚠️ 잔여 ${remain}회` : `잔여 ${remain}회`}
-                          </span>
+                          <span className="font-medium text-zinc-700 truncate max-w-[50%]">{pkg.name}</span>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {pkg.classType === "그룹" && (
+                              <span className="bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full">
+                                그룹 {pkg.groupSize}:1
+                              </span>
+                            )}
+                            <span className={`font-bold ${
+                              remain === 0 ? "text-red-500" : remain <= 3 ? "text-orange-500" : "text-zinc-500"
+                            }`}>
+                              {remain === 0 ? "🔴 완료" : remain <= 3 ? `⚠️ 잔여 ${remain}회` : `잔여 ${remain}회`}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}
@@ -410,6 +425,45 @@ export default function MembersPage() {
                 </p>
               )}
             </Field>
+            {/* 수업 유형 */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-zinc-500">수업 유형</label>
+              <div className="flex gap-2">
+                {(["1:1", "그룹"] as ClassType[]).map((type) => (
+                  <button key={type} type="button"
+                    onClick={() => setClassType(type)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition ${
+                      classType === type
+                        ? type === "1:1"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-purple-600 text-white border-purple-600"
+                        : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
+                    }`}>
+                    {type === "1:1" ? "👤 1:1" : "👥 그룹"}
+                  </button>
+                ))}
+              </div>
+              {classType === "그룹" && (
+                <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-semibold text-purple-700">그룹 인원 수</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <button key={n} type="button"
+                        onClick={() => setGroupSize(n)}
+                        className={`w-10 h-10 rounded-xl text-sm font-bold border transition ${
+                          groupSize === n
+                            ? "bg-purple-600 text-white border-purple-600"
+                            : "bg-white text-purple-700 border-purple-200 hover:border-purple-400"
+                        }`}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-purple-600">현재: {groupSize}명 동시 수업</p>
+                </div>
+              )}
+            </div>
+
             {/* 결제 수단 */}
             <div className="space-y-3">
               <label className="block text-xs font-semibold text-zinc-500">결제 수단</label>

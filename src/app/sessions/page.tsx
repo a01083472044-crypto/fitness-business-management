@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, Member, SessionPackage, Trainer } from "../lib/store";
+import { getMembers, saveMembers, getTrainers, getBranches, syncMemberTotals, Member, SessionPackage, Trainer, ClassType } from "../lib/store";
 import { useStaffTerm } from "../context/StaffTermContext";
 
 function formatKRW(n: number) {
@@ -103,6 +103,8 @@ export default function SessionsPage() {
   const [conductedSessions, setConductedSessions] = useState("");
   const [paymentInput, setPaymentInput] = useState("");
   const [registeredAt, setRegisteredAt] = useState(new Date().toISOString().slice(0, 10));
+  const [classType, setClassType] = useState<ClassType>("1:1");
+  const [groupSize, setGroupSize] = useState<number>(2);
 
   useEffect(() => {
     setMembers(getMembers());
@@ -201,6 +203,8 @@ export default function SessionsPage() {
     setConductedSessions("");
     setPaymentInput("");
     setRegisteredAt(new Date().toISOString().slice(0, 10));
+    setClassType("1:1");
+    setGroupSize(2);
     setShowForm(true);
   };
 
@@ -215,6 +219,8 @@ export default function SessionsPage() {
     setConductedSessions(String(v.pkg.conductedSessions));
     setPaymentInput(String(v.pkg.paymentAmount || ""));
     setRegisteredAt(v.pkg.registeredAt);
+    setClassType(v.pkg.classType ?? "1:1");
+    setGroupSize(v.pkg.groupSize ?? 2);
     setShowForm(true);
   };
 
@@ -250,6 +256,8 @@ export default function SessionsPage() {
       name: pkgName.trim(),
       trainerName,
       trainerType,
+      classType,
+      groupSize: classType === "1:1" ? 1 : groupSize,
       totalSessions: Number(totalSessions) || 0,
       conductedSessions: Number(conductedSessions) || 0,
       paymentAmount,
@@ -394,6 +402,11 @@ export default function SessionsPage() {
                         <span className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">
                           👤 {member.name}
                         </span>
+                        {pkg.classType === "그룹" && (
+                          <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+                            👥 그룹 {pkg.groupSize}:1
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         {pkg.trainerName && (
@@ -534,6 +547,44 @@ export default function SessionsPage() {
                 <p className="mt-1 text-xs font-medium text-blue-500">
                   → {parseKorean(paymentInput).toLocaleString("ko-KR")}원
                 </p>
+              )}
+            </Field>
+
+            {/* 수업 유형 */}
+            <Field label="수업 유형">
+              <div className="flex gap-2">
+                {(["1:1", "그룹"] as ClassType[]).map((type) => (
+                  <button key={type} type="button"
+                    onClick={() => setClassType(type)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition ${
+                      classType === type
+                        ? type === "1:1"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-purple-600 text-white border-purple-600"
+                        : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300"
+                    }`}>
+                    {type === "1:1" ? "👤 1:1" : "👥 그룹"}
+                  </button>
+                ))}
+              </div>
+              {classType === "그룹" && (
+                <div className="mt-2 bg-purple-50 border border-purple-100 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-semibold text-purple-700">그룹 인원 수</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <button key={n} type="button"
+                        onClick={() => setGroupSize(n)}
+                        className={`w-10 h-10 rounded-xl text-sm font-bold border transition ${
+                          groupSize === n
+                            ? "bg-purple-600 text-white border-purple-600"
+                            : "bg-white text-purple-700 border-purple-200 hover:border-purple-400"
+                        }`}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-purple-600">현재: {groupSize}명 동시 수업 (각자 개별 결제)</p>
+                </div>
               )}
             </Field>
 

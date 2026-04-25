@@ -447,22 +447,31 @@ export default function SchedulePage() {
                           else openAdd(selectedDate, time, t);
                         }}
                       >
-                        {entry ? (
-                          <div className={`rounded-lg border px-2 py-1.5 h-full ${color.cell} ${entry.done ? "opacity-50" : ""}`}>
-                            <p className={`text-xs font-bold truncate ${color.text}`}>
-                              {entry.done && "✓ "}{entry.memberName} 수업
-                            </p>
-                            {entry.packageId && (
-                              <p className="text-xs opacity-60 truncate">
-                                {(members.find((m) => m.id === entry.memberId)?.packages ?? [])
-                                  .find((p) => p.id === entry.packageId)?.name ?? ""}
+                        {entry ? (() => {
+                          const entryPkg = entry.packageId
+                            ? (members.find((m) => m.id === entry.memberId)?.packages ?? [])
+                                .find((p) => p.id === entry.packageId)
+                            : undefined;
+                          const isGroup = entryPkg?.classType === "그룹";
+                          return (
+                            <div className={`rounded-lg border px-2 py-1.5 h-full ${color.cell} ${entry.done ? "opacity-50" : ""}`}>
+                              <p className={`text-xs font-bold truncate ${color.text}`}>
+                                {entry.done && "✓ "}{entry.memberName} 수업
                               </p>
-                            )}
-                            {entry.note && (
-                              <p className={`text-xs opacity-60 truncate ${color.text}`}>{entry.note}</p>
-                            )}
-                          </div>
-                        ) : (
+                              {isGroup && (
+                                <span className="inline-block text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full leading-none mb-0.5">
+                                  그룹 {entryPkg?.groupSize}:1
+                                </span>
+                              )}
+                              {entryPkg && (
+                                <p className="text-xs opacity-60 truncate">{entryPkg.name}</p>
+                              )}
+                              {entry.note && (
+                                <p className={`text-xs opacity-60 truncate ${color.text}`}>{entry.note}</p>
+                              )}
+                            </div>
+                          );
+                        })() : (
                           <div className="flex items-center justify-center h-full">
                             <span className="text-zinc-200 text-xs">−</span>
                           </div>
