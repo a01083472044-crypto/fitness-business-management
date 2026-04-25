@@ -86,6 +86,7 @@ type RoleType  = "front" | "trainer" | "manager";
 type EmpType   = "정규직" | "프리랜서";
 type SalaryType = "base+rate" | "rate" | "base+fixed";
 type ManagerSalaryType = "fixed" | "base+rate" | "rate" | "base+fixed";
+type FrontSalaryType  = "fixed" | "base+rate" | "rate";
 
 const ROLE_INFO = {
   front:   { label: "프론트 데스크 / 운영 스태프", icon: "🖥️", color: "violet" },
@@ -120,6 +121,9 @@ function IndividualCalc() {
   const [empType, setEmpType]     = useState<EmpType>(saved?.empType ?? "정규직");
   const [salaryType, setSalaryType]       = useState<SalaryType>(saved?.salaryType ?? "base+rate");
   const [mgrSalaryType, setMgrSalaryType] = useState<ManagerSalaryType>(saved?.mgrSalaryType ?? "fixed");
+  const [frontSalaryType, setFrontSalaryType] = useState<FrontSalaryType>(saved?.frontSalaryType ?? "fixed");
+  const [frontRevenue, setFrontRevenueRaw]    = useState<string>(saved?.frontRevenue ?? "");
+  const [frontCommRate, setFrontCommRateRaw]  = useState<string>(saved?.frontCommRate ?? "10");
   const [baseSalary, setBaseRaw]          = useState<string>(saved?.baseSalary ?? "");
   const [mgrFixedSalary, setMgrFixedRaw] = useState<string>(saved?.mgrFixedSalary ?? "");
   const [ptRevenue, setPtRaw]             = useState<string>(saved?.ptRevenue ?? "");
@@ -147,6 +151,9 @@ function IndividualCalc() {
   const setEmp2         = (v: EmpType)          => { setEmpType(v);        p({ empType: v }); };
   const setSalType      = (v: SalaryType)       => { setSalaryType(v);     p({ salaryType: v }); };
   const setMgrSalType   = (v: ManagerSalaryType)=> { setMgrSalaryType(v); p({ mgrSalaryType: v }); };
+  const setFrontSalType = (v: FrontSalaryType)  => { setFrontSalaryType(v); p({ frontSalaryType: v }); };
+  const setFrontRev     = (v: string)           => { setFrontRevenueRaw(v); p({ frontRevenue: v }); };
+  const setFrontComm    = (v: string)           => { setFrontCommRateRaw(v); p({ frontCommRate: v }); };
   const setBase         = (v: string)           => { setBaseRaw(v);        p({ baseSalary: v }); };
   const setMgrFixed     = (v: string)           => { setMgrFixedRaw(v);    p({ mgrFixedSalary: v }); };
   const setPt           = (v: string)           => { setPtRaw(v);          p({ ptRevenue: v }); };
@@ -173,7 +180,17 @@ function IndividualCalc() {
   let grossSalary = 0;
 
   if (role === "front") {
-    grossSalary = base;
+    if (frontSalaryType === "fixed") {
+      grossSalary = base;
+    } else if (frontSalaryType === "base+rate") {
+      const rev = parseKorean(frontRevenue);
+      incentive   = rev * (Number(frontCommRate) / 100);
+      grossSalary = base + incentive;
+    } else { // rate
+      const rev = parseKorean(frontRevenue);
+      incentive   = rev * (Number(frontCommRate) / 100);
+      grossSalary = incentive;
+    }
   } else if (role === "trainer") {
     if (salaryType === "base+rate") {
       const rev = parseKorean(ptRevenue);
@@ -284,6 +301,22 @@ function IndividualCalc() {
           <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
             <p className="text-xs font-bold text-zinc-400 uppercase tracking-wide">현재 급여 정보</p>
 
+            {/* 프론트 급여 구조 */}
+            {role === "front" && (
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: "fixed",     label: "고정급" },
+                  { key: "base+rate", label: "기본급\n+배분율" },
+                  { key: "rate",      label: "배분율\n만" },
+                ] as { key: FrontSalaryType; label: string }[]).map(({ key, label }) => (
+                  <button key={key} onClick={() => setFrontSalType(key)}
+                    className={`py-2 rounded-xl border text-xs font-semibold whitespace-pre-line transition ${frontSalaryType === key ? "bg-violet-600 text-white border-violet-600" : "bg-white text-zinc-500 border-zinc-200"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* 트레이너 급여 구조 */}
             {role === "trainer" && (
               <div className="grid grid-cols-3 gap-2">
@@ -323,7 +356,7 @@ function IndividualCalc() {
             )}
 
             {/* 기본급 (front / trainer / manager base+rate, base+fixed) */}
-            {(role === "front" ||
+            {((role === "front" && frontSalaryType !== "rate") ||
               (role === "trainer" && (salaryType === "base+rate" || salaryType === "base+fixed")) ||
               (role === "manager" && (mgrSalaryType === "base+rate" || mgrSalaryType === "base+fixed"))) && (
               <NumInput
@@ -331,6 +364,25 @@ function IndividualCalc() {
                 value={baseSalary} onChange={setBase}
                 hint={role === "trainer" && salaryType !== "base+fixed" ? "국내 통상 50~80만원 수준" : undefined}
               />
+            )}
+
+            {/* 프론트 배분율 */}
+            {role === "front" && (frontSalaryType === "base+rate" || frontSalaryType === "rate") && (
+              <>
+                <NumInput label="이번달 센터 전체 매출" value={frontRevenue} onChange={setFrontRev} />
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-zinc-500">매출 배분율</label>
+                    <div className="flex items-center gap-1">
+                      <input type="number" min="1" max="30" value={frontCommRate} onChange={(e) => setFrontComm(e.target.value)}
+                        className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm font-bold text-violet-600 text-center focus:outline-none focus:border-violet-500" />
+                      <span className="text-sm font-bold text-violet-600">%</span>
+                    </div>
+                  </div>
+                  <input type="range" min="1" max="30" value={frontCommRate} onChange={(e) => setFrontComm(e.target.value)} className="w-full accent-violet-600" />
+                  <div className="flex justify-between text-xs text-zinc-400 mt-1"><span>1%</span><span className="text-violet-600">5~15% 권장</span><span>30%</span></div>
+                </div>
+              </>
             )}
 
             {/* 트레이너 배분율 */}
@@ -543,9 +595,27 @@ function IndividualCalc() {
                 <p className="text-sm font-bold text-zinc-800">📋 급여 구조 예시</p>
 
                 {role === "front" && (
-                  <div className="rounded-xl bg-violet-50 p-3 text-xs text-violet-700 space-y-1">
-                    <p className="font-bold">고정급 구조</p>
-                    <p>월 {formatKRW(nhMaxGross)} (세전) 지급 가능</p>
+                  <div className="space-y-2">
+                    <div className="rounded-xl bg-violet-50 p-3 text-xs text-violet-700 space-y-1">
+                      <p className="font-bold">① 고정급</p>
+                      <p>월 {formatKRW(nhMaxGross)} (세전) 지급 가능</p>
+                    </div>
+                    <div className="rounded-xl bg-violet-50 p-3 text-xs text-violet-700 space-y-1">
+                      <p className="font-bold">② 기본급 + 배분율</p>
+                      {nhRev > 0 ? (() => {
+                        const suggestBase = Math.round(nhMaxGross * 0.7 / 10000) * 10000;
+                        const remaining   = nhMaxGross - suggestBase;
+                        const suggestRate = nhRev > 0 ? Math.round((remaining / nhRev) * 100) : 0;
+                        return <><p>기본급 {formatKRW(suggestBase)} + 매출의 {suggestRate}% 배분</p><p className="opacity-70">예상 배분 인센티브 {formatKRW(remaining)}</p></>;
+                      })() : <p>센터 매출 입력 시 계산됩니다</p>}
+                    </div>
+                    <div className="rounded-xl bg-violet-50 p-3 text-xs text-violet-700 space-y-1">
+                      <p className="font-bold">③ 배분율만</p>
+                      {nhRev > 0 ? (() => {
+                        const suggestRate = Math.round((nhMaxGross / nhRev) * 100);
+                        return <p>매출의 {suggestRate}% 배분 → {formatKRW(nhMaxGross)} 예상</p>;
+                      })() : <p>센터 매출 입력 시 계산됩니다</p>}
+                    </div>
                   </div>
                 )}
 
