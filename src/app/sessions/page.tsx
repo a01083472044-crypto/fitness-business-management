@@ -91,6 +91,7 @@ export default function SessionsPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
   const [filter, setFilter]         = useState<FilterType>("진행중");
   const [trainerFilter, setTrainerFilter] = useState<string>("전체");
+  const [expandedTrainers, setExpandedTrainers] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<{ memberId: string; pkgId: string } | null>(null);
 
@@ -361,130 +362,191 @@ export default function SessionsPage() {
           </div>
         )}
 
-        {/* 상태 필터 */}
-        <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
-          {(["진행중", "완료", "전체"] as FilterType[]).map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${
-                filter === f ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
-              }`}>
-              {f}
-              <span className="ml-1 text-xs font-normal">
-                ({f === "진행중" ? active : f === "완료" ? done : allPackages.length})
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* 트레이너 아코디언 */}
+        {(() => {
+          // 지점 필터 기준 트레이너 목록 (패키지가 있는 트레이너 + 등록된 트레이너 모두)
+          const branchTrainers = trainers.filter((t) =>
+            selectedBranch === "전체" || t.branch === selectedBranch
+          );
 
-        {/* 트레이너 필터 */}
-        {trainerNames.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {["전체", ...trainerNames].map((name) => (
-              <button key={name} onClick={() => setTrainerFilter(name)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                  trainerFilter === name
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "bg-white text-zinc-500 border-zinc-200"
-                }`}>
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
+          // 패키지가 있지만 트레이너 관리에 없는 이름도 포함
+          const pkgTrainerNames = [...new Set(
+            branchPackages.map((v) => v.pkg.trainerName).filter(Boolean)
+          )];
+          const allTrainerRows = [
+            ...branchTrainers,
+            ...pkgTrainerNames
+              .filter((name) => !branchTrainers.find((t) => t.name === name))
+              .map((name) => ({ id: name, name, empType: "" as const, branch: "", status: "재직" as const, phone: "", joinDate: "", memo: "", salaryType: "base+rate" as const, baseSalary: 0, commRate: 50, sessionFee: 0 })),
+          ];
 
-        {/* 패키지 목록 */}
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
-            {allPackages.length === 0
-              ? <>등록된 패키지가 없습니다.<br /><button onClick={openAdd} className="mt-2 text-blue-500 font-semibold">+ 패키지 등록하기</button></>
-              : branchPackages.length === 0
-              ? <><strong>{selectedBranch}</strong>에 등록된 패키지가 없습니다.</>
-              : "해당 조건의 패키지가 없습니다."}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filtered.map(({ pkg, member }) => {
-              const remain = pkg.totalSessions - pkg.conductedSessions;
-              const progress = pkg.totalSessions > 0 ? (pkg.conductedSessions / pkg.totalSessions) * 100 : 0;
-              const isDone = remain === 0;
-              return (
-                <div key={pkg.id}
-                  className={`bg-white rounded-2xl border p-4 space-y-3 ${
-                    isDone ? "border-zinc-100 opacity-70" : remain <= 3 ? "border-orange-200" : "border-zinc-100"
-                  }`}>
-                  {/* 상단: 수업명 + 회원명 */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-zinc-900">{pkg.name}</p>
-                        <span className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">
-                          👤 {member.name}
-                        </span>
-                        {pkg.classType === "그룹" && (
-                          <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">
-                            👥 그룹 {pkg.groupSize}:1
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {pkg.trainerName && (
-                          <p className="text-xs text-zinc-400">🏋️ {pkg.trainerName}</p>
-                        )}
-                        {pkg.trainerType && (
-                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-                            pkg.trainerType === "정규직"
-                              ? "bg-blue-50 text-blue-500"
-                              : "bg-emerald-50 text-emerald-500"
-                          }`}>{pkg.trainerType}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button onClick={() => openEdit({ pkg, member })}
-                        className="text-xs text-zinc-400 hover:text-blue-500 transition">수정</button>
-                      <button onClick={() => handleDelete(member.id, pkg.id)}
-                        className="text-xs text-zinc-400 hover:text-red-500 transition">삭제</button>
-                    </div>
-                  </div>
+          if (allTrainerRows.length === 0) {
+            return (
+              <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center text-zinc-400 text-sm">
+                {allPackages.length === 0
+                  ? <><p>등록된 패키지가 없습니다.</p><button onClick={openAdd} className="mt-2 text-blue-500 font-semibold">+ 패키지 등록하기</button></>
+                  : <p><strong>{selectedBranch}</strong>에 소속된 {staffTerm}가 없습니다.</p>}
+              </div>
+            );
+          }
 
-                  {/* 진행 바 */}
-                  <div>
-                    <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                      <span>진행 {pkg.conductedSessions} / {pkg.totalSessions}회</span>
-                      <RemainBadge remain={remain} />
-                    </div>
-                    <div className="h-2.5 bg-zinc-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          isDone ? "bg-zinc-400" : remain <= 3 ? "bg-orange-400" : "bg-blue-500"
-                        }`}
-                        style={{ width: `${Math.min(progress, 100)}%` }}
-                      />
-                    </div>
-                  </div>
+          return (
+            <div className="space-y-3">
+              {allTrainerRows.map((t) => {
+                const trainerPkgs = branchPackages.filter((v) => v.pkg.trainerName === t.name);
+                const activePkgs  = trainerPkgs.filter((v) => {
+                  const r = v.pkg.totalSessions - v.pkg.conductedSessions;
+                  return r > 0 || v.pkg.totalSessions === 0;
+                });
+                const donePkgs    = trainerPkgs.filter((v) =>
+                  v.pkg.totalSessions > 0 && v.pkg.totalSessions - v.pkg.conductedSessions === 0
+                );
+                const isExpanded  = expandedTrainers.has(t.name);
+                const toggleExpand = () =>
+                  setExpandedTrainers((prev) => {
+                    const next = new Set(prev);
+                    next.has(t.name) ? next.delete(t.name) : next.add(t.name);
+                    return next;
+                  });
 
-                  {/* 하단: 결제금액 + 등록일 + 버튼 */}
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-zinc-400 space-y-0.5">
-                      {pkg.paymentAmount > 0 && <p>결제 {formatKRW(pkg.paymentAmount)}</p>}
-                      <p>등록일 {pkg.registeredAt}</p>
-                    </div>
+                return (
+                  <div key={t.id} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                    {/* 트레이너 헤더 (클릭으로 펼치기) */}
                     <button
-                      onClick={() => handleProgress(member.id, pkg.id)}
-                      disabled={isDone}
-                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                        isDone
-                          ? "bg-zinc-100 text-zinc-300 cursor-not-allowed"
-                          : "bg-blue-600 text-white hover:bg-blue-700"
-                      }`}>
-                      {isDone ? "완료됨" : "수업 진행 +1"}
+                      onClick={toggleExpand}
+                      className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-zinc-50 transition text-left"
+                    >
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="font-black text-zinc-900">{t.name}</span>
+                        {t.empType && (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            t.empType === "정규직" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                          }`}>{t.empType}</span>
+                        )}
+                        {t.branch && selectedBranch === "전체" && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">{t.branch}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          {activePkgs.length > 0 && (
+                            <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">
+                              진행 {activePkgs.length}
+                            </span>
+                          )}
+                          {donePkgs.length > 0 && (
+                            <span className="bg-zinc-100 text-zinc-500 font-semibold px-2 py-0.5 rounded-full">
+                              완료 {donePkgs.length}
+                            </span>
+                          )}
+                          {trainerPkgs.length === 0 && (
+                            <span className="text-zinc-300 text-xs">회원 없음</span>
+                          )}
+                        </div>
+                        <span className={`text-zinc-400 text-sm transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
+                          ▼
+                        </span>
+                      </div>
                     </button>
+
+                    {/* 회원 패키지 목록 (펼쳐진 상태) */}
+                    {isExpanded && (
+                      <div className="border-t border-zinc-100 divide-y divide-zinc-50">
+                        {trainerPkgs.length === 0 ? (
+                          <div className="px-4 py-4 text-center text-zinc-400 text-xs">
+                            등록된 수업 패키지가 없습니다
+                          </div>
+                        ) : (
+                          trainerPkgs
+                            .sort((a, b) => {
+                              // 진행중 먼저, 완료 나중
+                              const ra = a.pkg.totalSessions - a.pkg.conductedSessions;
+                              const rb = b.pkg.totalSessions - b.pkg.conductedSessions;
+                              const aDone = a.pkg.totalSessions > 0 && ra === 0;
+                              const bDone = b.pkg.totalSessions > 0 && rb === 0;
+                              if (aDone !== bDone) return aDone ? 1 : -1;
+                              return ra - rb;
+                            })
+                            .map(({ pkg, member }) => {
+                              const remain  = pkg.totalSessions - pkg.conductedSessions;
+                              const isDone  = pkg.totalSessions > 0 && remain === 0;
+                              const progress = pkg.totalSessions > 0
+                                ? (pkg.conductedSessions / pkg.totalSessions) * 100 : 0;
+                              const typeLabel = pkg.classType === "그룹"
+                                ? `그룹 ${pkg.groupSize}:1` : "1:1 PT";
+
+                              return (
+                                <div key={pkg.id}
+                                  className={`px-4 py-3 space-y-2.5 ${isDone ? "opacity-60" : ""}`}>
+                                  {/* 회원명 + 상품 유형 */}
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-bold text-zinc-900 text-sm">{member.name}</span>
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                          pkg.classType === "그룹"
+                                            ? "bg-purple-100 text-purple-700"
+                                            : "bg-blue-50 text-blue-600"
+                                        }`}>
+                                          {typeLabel}
+                                        </span>
+                                        {remain <= 3 && !isDone && remain > 0 && (
+                                          <span className="text-xs font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                                            ⚠️ 잔여 {remain}회
+                                          </span>
+                                        )}
+                                        {isDone && (
+                                          <span className="text-xs font-bold bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">
+                                            🔴 완료
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-zinc-400 mt-0.5">{pkg.name}</p>
+                                    </div>
+                                    <div className="flex gap-2 flex-shrink-0 text-xs">
+                                      <button onClick={() => openEdit({ pkg, member })}
+                                        className="text-zinc-400 hover:text-blue-500 transition">수정</button>
+                                      <button onClick={() => handleDelete(member.id, pkg.id)}
+                                        className="text-zinc-400 hover:text-red-500 transition">삭제</button>
+                                    </div>
+                                  </div>
+
+                                  {/* 진행 바 */}
+                                  <div>
+                                    <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                                      <span>진행 {pkg.conductedSessions} / {pkg.totalSessions || "?"}회</span>
+                                      {pkg.paymentAmount > 0 && <span>{formatKRW(pkg.paymentAmount)}</span>}
+                                    </div>
+                                    <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                                      <div className={`h-full rounded-full transition-all ${
+                                        isDone ? "bg-zinc-300" : remain <= 3 ? "bg-orange-400" : "bg-blue-500"
+                                      }`} style={{ width: `${Math.min(progress, 100)}%` }} />
+                                    </div>
+                                  </div>
+
+                                  {/* 수업 진행 버튼 */}
+                                  <button
+                                    onClick={() => handleProgress(member.id, pkg.id)}
+                                    disabled={isDone}
+                                    className={`w-full py-2 rounded-xl text-sm font-semibold transition ${
+                                      isDone
+                                        ? "bg-zinc-100 text-zinc-300 cursor-not-allowed"
+                                        : "bg-blue-600 text-white hover:bg-blue-700"
+                                    }`}>
+                                    {isDone ? "✓ 완료됨" : "수업 진행 +1"}
+                                  </button>
+                                </div>
+                              );
+                            })
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* 등록/수정 모달 */}
