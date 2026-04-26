@@ -135,10 +135,14 @@ export default function SessionsPage() {
     ), [members]);
 
   // 지점 필터 적용된 패키지
+  // member.trainer(현재 배정 담당자) 우선 → 없으면 pkg.trainerName 으로 폴백
   const branchPackages = useMemo(() =>
     selectedBranch === "전체"
       ? allPackages
-      : allPackages.filter((v) => trainerBranchMap[v.pkg.trainerName] === selectedBranch),
+      : allPackages.filter((v) => {
+          const key = v.member.trainer || v.pkg.trainerName;
+          return trainerBranchMap[key] === selectedBranch;
+        }),
     [allPackages, selectedBranch, trainerBranchMap]
   );
 
@@ -345,7 +349,10 @@ export default function SessionsPage() {
             {branches.map((branch) => {
               const count = branch === "전체"
                 ? allPackages.length
-                : allPackages.filter((v) => trainerBranchMap[v.pkg.trainerName] === branch).length;
+                : allPackages.filter((v) => {
+                    const key = v.member.trainer || v.pkg.trainerName;
+                    return trainerBranchMap[key] === branch;
+                  }).length;
               return (
                 <button key={branch}
                   onClick={() => { setSelectedBranch(branch); setTrainerFilter("전체"); }}
@@ -370,8 +377,9 @@ export default function SessionsPage() {
           );
 
           // 패키지가 있지만 트레이너 관리에 없는 이름도 포함
+          // member.trainer 우선 (현재 배정 담당자)
           const pkgTrainerNames = [...new Set(
-            branchPackages.map((v) => v.pkg.trainerName).filter(Boolean)
+            branchPackages.map((v) => v.member.trainer || v.pkg.trainerName).filter(Boolean)
           )];
           const allTrainerRows = [
             ...branchTrainers,
@@ -393,7 +401,10 @@ export default function SessionsPage() {
           return (
             <div className="space-y-3">
               {allTrainerRows.map((t) => {
-                const trainerPkgs = branchPackages.filter((v) => v.pkg.trainerName === t.name);
+                // member.trainer(현재 배정) 우선 → 없으면 pkg.trainerName으로 폴백
+                const trainerPkgs = branchPackages.filter((v) =>
+                  (v.member.trainer || v.pkg.trainerName) === t.name
+                );
                 const activePkgs  = trainerPkgs.filter((v) => {
                   const r = v.pkg.totalSessions - v.pkg.conductedSessions;
                   return r > 0 || v.pkg.totalSessions === 0;
