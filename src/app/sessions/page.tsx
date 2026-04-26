@@ -90,7 +90,6 @@ export default function SessionsPage() {
   const [savedBranches, setSavedBranches] = useState<string[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
   const [filter, setFilter]         = useState<FilterType>("진행중");
-  const [trainerFilter, setTrainerFilter] = useState<string>("전체");
   const [expandedTrainers, setExpandedTrainers] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<{ memberId: string; pkgId: string } | null>(null);
@@ -146,31 +145,7 @@ export default function SessionsPage() {
     [allPackages, selectedBranch, trainerBranchMap]
   );
 
-  // 담당 트레이너 목록 (지점 필터 후 추출)
-  const trainerNames = useMemo(() => {
-    const names = [...new Set(branchPackages.map((v) => v.pkg.trainerName).filter(Boolean))];
-    return names;
-  }, [branchPackages]);
-
-  // 필터 적용
-  const filtered = useMemo(() => {
-    let list = branchPackages;
-    // totalSessions=0 은 회차 미설정 상태 → 진행중으로 분류 (완료 아님)
-    if (filter === "진행중") list = list.filter((v) => {
-      const remain = v.pkg.totalSessions - v.pkg.conductedSessions;
-      return remain > 0 || v.pkg.totalSessions === 0;
-    });
-    if (filter === "완료") list = list.filter((v) =>
-      v.pkg.totalSessions > 0 && v.pkg.totalSessions - v.pkg.conductedSessions === 0
-    );
-    if (trainerFilter !== "전체") list = list.filter((v) => v.pkg.trainerName === trainerFilter);
-    // 잔여 적은 것부터 정렬
-    return [...list].sort((a, b) => {
-      const ra = a.pkg.totalSessions - a.pkg.conductedSessions;
-      const rb = b.pkg.totalSessions - b.pkg.conductedSessions;
-      return ra - rb;
-    });
-  }, [branchPackages, filter, trainerFilter]);
+  // (아코디언 뷰로 전환 후 trainerFilter/filtered 는 불필요 — 제거됨)
 
   // 통계 (지점 필터 기준) — totalSessions=0은 진행중 처리
   const active   = branchPackages.filter((v) => {
@@ -355,7 +330,7 @@ export default function SessionsPage() {
                   }).length;
               return (
                 <button key={branch}
-                  onClick={() => { setSelectedBranch(branch); setTrainerFilter("전체"); }}
+                  onClick={() => setSelectedBranch(branch)}
                   className={`flex-shrink-0 flex-1 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
                     selectedBranch === branch
                       ? "bg-white text-zinc-900 shadow-sm"

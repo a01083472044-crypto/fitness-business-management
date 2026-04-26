@@ -95,6 +95,8 @@ export default function DashboardPage() {
   const branchMembers = useMemo(() => {
     if (selectedBranch === "전체") return members;
     return members.filter((m) =>
+      // member.trainer(현재 배정) 우선 → 없으면 패키지 trainerName으로 폴백
+      trainerBranchMap[m.trainer] === selectedBranch ||
       m.packages?.some((pkg) => trainerBranchMap[pkg.trainerName] === selectedBranch)
     );
   }, [members, selectedBranch, trainerBranchMap]);
@@ -167,10 +169,21 @@ export default function DashboardPage() {
       ? monthSettlements.filter((s) => s.empType === "프리랜서").reduce((sum, s) => sum + s.grossSalary, 0)
       : costs.freelanceSalary;
 
+    // ── 이번달 신규 등록 패키지만 필터 (계산기는 월별 데이터를 기대) ──────────
+    const monthPkgs = branchMembers.flatMap((m) =>
+      (m.packages ?? []).filter((p) => (p.registeredAt ?? "").startsWith(month))
+    );
+    const monthPayment  = monthPkgs.reduce((s, p) => s + p.paymentAmount, 0);
+    const monthSessions = monthPkgs.reduce((s, p) => s + p.totalSessions, 0);
+    // 이번달 완료 수업(스케줄 기반) 사용. 신규 등록이 없으면 전체 누적으로 폴백
+    const sendPayment    = monthPayment  > 0 ? monthPayment    : totalPaid;
+    const sendSessions   = monthSessions > 0 ? monthSessions   : Math.max(totalSessions, 1);
+    const sendConducted  = monthPayment  > 0 ? Math.min(doneSessions, monthSessions) : conductedTotal;
+
     setPrefill({
-      totalPayment:      totalPaid,
-      totalSessions:     totalSessions,
-      conductedSessions: conductedTotal,
+      totalPayment:      sendPayment,
+      totalSessions:     sendSessions,
+      conductedSessions: sendConducted,
       rent:              costs.rent,
       trainerSalary:     fullGross,
       freelanceSalary:   freeGross,
