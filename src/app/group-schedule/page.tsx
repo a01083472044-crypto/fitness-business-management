@@ -16,18 +16,18 @@ const TIME_SLOTS = Array.from({ length: 16 }, (_, i) =>
 const KO_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 const TRAINER_COLORS = [
-  { cell: "bg-rose-100 border-rose-300",    text: "text-rose-800",    header: "text-rose-600"    },
+  { cell: "bg-purple-100 border-purple-300",   text: "text-purple-800",  header: "text-purple-600"  },
+  { cell: "bg-teal-100 border-teal-300",       text: "text-teal-800",    header: "text-teal-600"    },
+  { cell: "bg-fuchsia-100 border-fuchsia-300", text: "text-fuchsia-800", header: "text-fuchsia-600" },
+  { cell: "bg-indigo-100 border-indigo-300",   text: "text-indigo-800",  header: "text-indigo-600"  },
+  { cell: "bg-cyan-100 border-cyan-300",       text: "text-cyan-800",    header: "text-cyan-600"    },
+  { cell: "bg-violet-100 border-violet-300",   text: "text-violet-800",  header: "text-violet-600"  },
+  { cell: "bg-sky-100 border-sky-300",         text: "text-sky-800",     header: "text-sky-600"     },
   { cell: "bg-emerald-100 border-emerald-300", text: "text-emerald-800", header: "text-emerald-600" },
-  { cell: "bg-amber-100 border-amber-300",  text: "text-amber-800",  header: "text-amber-600"  },
-  { cell: "bg-blue-100 border-blue-300",    text: "text-blue-800",   header: "text-blue-600"   },
-  { cell: "bg-violet-100 border-violet-300", text: "text-violet-800", header: "text-violet-600" },
-  { cell: "bg-cyan-100 border-cyan-300",    text: "text-cyan-800",   header: "text-cyan-600"   },
-  { cell: "bg-pink-100 border-pink-300",    text: "text-pink-800",   header: "text-pink-600"   },
-  { cell: "bg-lime-100 border-lime-300",    text: "text-lime-800",   header: "text-lime-600"   },
 ];
 
 const inputCls =
-  "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-sm";
+  "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 transition text-sm";
 
 // ── 날짜 유틸 ──────────────────────────────────────────────────────────────
 function toDateStr(d: Date) {
@@ -63,22 +63,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 // ── 메인 페이지 ────────────────────────────────────────────────────────────
-export default function SchedulePage() {
+export default function GroupSchedulePage() {
   const { staffTerm } = useStaffTerm();
   const today = useMemo(() => new Date(), []);
 
-  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
-  const [members,   setMembers]   = useState<Member[]>([]);
-  const [trainers,  setTrainers]  = useState<Trainer[]>([]);
+  const [schedules,     setSchedules]     = useState<ScheduleEntry[]>([]);
+  const [members,       setMembers]       = useState<Member[]>([]);
+  const [trainers,      setTrainers]      = useState<Trainer[]>([]);
   const [savedBranches, setSavedBranches] = useState<string[]>([]);
 
-  const [weekBase,      setWeekBase]      = useState<Date>(today);
-  const [selectedDate,  setSelectedDate]  = useState<string>(toDateStr(today));
+  const [weekBase,       setWeekBase]       = useState<Date>(today);
+  const [selectedDate,   setSelectedDate]   = useState<string>(toDateStr(today));
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
 
   // 지점 추가 모달
-  const [showBranchModal, setShowBranchModal] = useState(false);
-  const [newBranchName,   setNewBranchName]   = useState("");
+  const [showBranchModal,  setShowBranchModal]  = useState(false);
+  const [newBranchName,    setNewBranchName]    = useState("");
   const [branchDeleteMode, setBranchDeleteMode] = useState(false);
 
   // 모달
@@ -102,30 +102,24 @@ export default function SchedulePage() {
 
   const weekDates = useMemo(() => getWeekDates(weekBase), [weekBase]);
 
-  // 선택된 날짜의 엔트리 (1:1 전용)
+  // 선택된 날짜의 그룹 엔트리만
   const dayEntries = useMemo(
-    () => schedules.filter((e) => e.date === selectedDate && (!e.classType || e.classType === "1:1")),
+    () => schedules.filter((e) => e.date === selectedDate && e.classType === "그룹"),
     [schedules, selectedDate]
   );
 
-  // 지점 목록 (저장된 지점 + 트레이너 branch 필드 합산, 중복 제거)
+  // 지점 목록
   const branches = useMemo(() => {
     const fromTrainers = trainers.map((t) => t.branch).filter(Boolean);
     const merged = Array.from(new Set([...savedBranches, ...fromTrainers]));
     return ["전체", ...merged];
   }, [trainers, savedBranches]);
 
-  // 지점 탭 항상 표시 (저장된 지점 있으면)
-  const showBranchTabs = branches.length > 1;
-
   // 지점 추가 핸들러
   const handleAddBranch = () => {
     const name = newBranchName.trim();
     if (!name) return;
-    if (branches.includes(name)) {
-      alert("이미 존재하는 지점명입니다.");
-      return;
-    }
+    if (branches.includes(name)) { alert("이미 존재하는 지점명입니다."); return; }
     const updated = [...savedBranches, name];
     setSavedBranches(updated);
     saveBranches(updated);
@@ -136,7 +130,7 @@ export default function SchedulePage() {
 
   // 지점 삭제 핸들러
   const handleDeleteBranch = (branch: string) => {
-    if (!confirm(`"${branch}" 지점을 삭제하시겠습니까?\n해당 지점에 소속된 트레이너 데이터는 삭제되지 않습니다.`)) return;
+    if (!confirm(`"${branch}" 지점을 삭제하시겠습니까?`)) return;
     const updated = savedBranches.filter((b) => b !== branch);
     setSavedBranches(updated);
     saveBranches(updated);
@@ -157,30 +151,39 @@ export default function SchedulePage() {
     [trainers, formTrainerId]
   );
 
-  // 담당 트레이너 기준으로 필터된 회원 목록
+  // 그룹 패키지가 있는 회원만 (담당 트레이너 기준)
   const filteredMembersByTrainer = useMemo(() => {
-    if (!selectedFormTrainer) return members;
-    return members.filter((m) => m.trainer === selectedFormTrainer.name);
+    const byTrainer = selectedFormTrainer
+      ? members.filter((m) => m.trainer === selectedFormTrainer.name)
+      : members;
+    return byTrainer.filter((m) =>
+      (m.packages ?? []).some(
+        (p) =>
+          p.classType === "그룹" &&
+          (p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0)
+      )
+    );
   }, [members, selectedFormTrainer]);
 
-  // 선택 회원의 1:1 패키지만 (회차 미설정 포함)
+  // 선택 회원의 그룹 패키지만
   const memberPackages = useMemo(() => {
     const m = members.find((mb) => mb.id === formMemberId);
     return (m?.packages ?? []).filter(
-      (p) => (!p.classType || p.classType === "1:1") &&
-             (p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0)
+      (p) =>
+        p.classType === "그룹" &&
+        (p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0)
     );
   }, [members, formMemberId]);
 
-  // ── 셀 조회 (1:1만) ─────────────────────────────────────────────────────
-  const getEntry = useCallback(
+  // ── 그룹 셀 조회 (배열 반환) ────────────────────────────────────────────
+  const getGroupEntries = useCallback(
     (date: string, time: string, trainerId: string) =>
-      schedules.find(
+      schedules.filter(
         (e) =>
           e.date === date &&
           e.startTime === time &&
           e.trainerId === trainerId &&
-          (!e.classType || e.classType === "1:1")
+          e.classType === "그룹"
       ),
     [schedules]
   );
@@ -191,19 +194,19 @@ export default function SchedulePage() {
     saveSchedules(updated);
   };
 
-  // ── 폼 열기 (신규) ────────────────────────────────────────────────────────
+  // ── 폼 열기 (신규 참가자 추가) ────────────────────────────────────────────
   const openAdd = (date: string, time: string, trainer?: Trainer) => {
     setEditingId(null);
     setFormDate(date);
     setFormTime(time);
     setFormTrainerId(trainer?.id ?? (activeTrainers[0]?.id ?? ""));
-    setFormMemberId(members[0]?.id ?? "");
+    setFormMemberId("");
     setFormPackageId("");
     setFormNote("");
     setShowForm(true);
   };
 
-  // ── 폼 열기 (수정) ────────────────────────────────────────────────────────
+  // ── 폼 열기 (참가자 수정) ─────────────────────────────────────────────────
   const openEdit = (e: ScheduleEntry) => {
     setEditingId(e.id);
     setFormDate(e.date);
@@ -221,6 +224,8 @@ export default function SchedulePage() {
     const member  = members.find((m) => m.id === formMemberId);
     if (!trainer || !member) return;
 
+    const selectedPkg = memberPackages.find((p) => p.id === formPackageId);
+
     const entry: ScheduleEntry = {
       id:          editingId ?? crypto.randomUUID(),
       date:        formDate,
@@ -234,7 +239,8 @@ export default function SchedulePage() {
       done:        editingId
         ? (schedules.find((e) => e.id === editingId)?.done ?? false)
         : false,
-      classType:   "1:1",
+      classType:   "그룹",
+      groupSize:   selectedPkg?.groupSize ?? 2,
     };
 
     const updated = editingId
@@ -248,13 +254,11 @@ export default function SchedulePage() {
   const handleDone = (entry: ScheduleEntry) => {
     if (entry.done) return;
 
-    // 스케줄 완료 처리
     const updatedSchedules = schedules.map((e) =>
       e.id === entry.id ? { ...e, done: true } : e
     );
     persist(updatedSchedules);
 
-    // 패키지 회차 +1 연동
     if (entry.packageId) {
       const updatedMembers = members.map((m) => {
         if (m.id !== entry.memberId) return m;
@@ -286,9 +290,6 @@ export default function SchedulePage() {
     return `${s.getFullYear()}.${s.getMonth() + 1}.${s.getDate()} ~ ${e.getMonth() + 1}.${e.getDate()}`;
   }, [weekDates]);
 
-  // ── 선택 트레이너 for 폼 찾기 ─────────────────────────────────────────────
-  const selectedMember = members.find((m) => m.id === formMemberId);
-
   // ── 렌더링 ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -297,14 +298,14 @@ export default function SchedulePage() {
         {/* 헤더 */}
         <div className="max-w-lg mx-auto px-2 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-zinc-900">👤 1:1 PT 스케줄</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">{staffTerm}별 1:1 PT 주간 일정</p>
+            <h1 className="text-2xl font-black text-zinc-900">👥 그룹 수업 스케줄</h1>
+            <p className="text-sm text-zinc-500 mt-0.5">{staffTerm}별 그룹 수업 주간 일정</p>
           </div>
           <button
             onClick={() => openAdd(selectedDate, "09:00")}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition flex-shrink-0"
+            className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 transition flex-shrink-0"
           >
-            + 일정 추가
+            + 참가자 추가
           </button>
         </div>
 
@@ -324,7 +325,6 @@ export default function SchedulePage() {
                   >
                     {branch}
                   </button>
-                  {/* 삭제 버튼 — "전체" 탭과 트레이너에서 온 지점 제외, 저장된 지점만 */}
                   {branchDeleteMode && branch !== "전체" && savedBranches.includes(branch) && (
                     <button
                       onClick={() => handleDeleteBranch(branch)}
@@ -334,7 +334,6 @@ export default function SchedulePage() {
                 </div>
               ))}
             </div>
-            {/* 편집 토글 버튼 */}
             {savedBranches.length > 0 && (
               <button
                 onClick={() => setBranchDeleteMode((v) => !v)}
@@ -347,10 +346,9 @@ export default function SchedulePage() {
                 {branchDeleteMode ? "✓" : "✎"}
               </button>
             )}
-            {/* 지점 추가 버튼 */}
             <button
               onClick={() => { setShowBranchModal(true); setBranchDeleteMode(false); }}
-              className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white text-lg font-bold flex items-center justify-center hover:bg-blue-700 transition"
+              className="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-600 text-white text-lg font-bold flex items-center justify-center hover:bg-purple-700 transition"
             >+</button>
           </div>
         </div>
@@ -374,11 +372,11 @@ export default function SchedulePage() {
         <div className="max-w-lg mx-auto px-2">
           <div className="flex gap-1">
             {weekDates.map((d) => {
-              const ds   = toDateStr(d);
-              const isToday  = ds === toDateStr(today);
+              const ds         = toDateStr(d);
+              const isToday    = ds === toDateStr(today);
               const isSelected = ds === selectedDate;
-              const dayEntryCount = schedules.filter(
-                (e) => e.date === ds && (!e.classType || e.classType === "1:1")
+              const dayGroupCount = schedules.filter(
+                (e) => e.date === ds && e.classType === "그룹"
               ).length;
               return (
                 <button
@@ -386,18 +384,18 @@ export default function SchedulePage() {
                   onClick={() => setSelectedDate(ds)}
                   className={`flex-1 py-2 rounded-xl text-center transition ${
                     isSelected
-                      ? "bg-blue-600 text-white"
+                      ? "bg-purple-600 text-white"
                       : "bg-white text-zinc-500 hover:bg-zinc-100 border border-zinc-200"
                   }`}
                 >
-                  <p className={`text-xs font-semibold ${isSelected ? "text-blue-100" : isToday ? "text-blue-500" : "text-zinc-400"}`}>
+                  <p className={`text-xs font-semibold ${isSelected ? "text-purple-100" : isToday ? "text-purple-500" : "text-zinc-400"}`}>
                     {KO_DAYS[d.getDay()]}
                   </p>
-                  <p className={`text-sm font-black ${isToday && !isSelected ? "text-blue-500" : ""}`}>
+                  <p className={`text-sm font-black ${isToday && !isSelected ? "text-purple-500" : ""}`}>
                     {d.getDate()}
                   </p>
-                  {dayEntryCount > 0 && (
-                    <div className={`mx-auto mt-0.5 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-blue-400"}`} />
+                  {dayGroupCount > 0 && (
+                    <div className={`mx-auto mt-0.5 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-purple-400"}`} />
                   )}
                 </button>
               );
@@ -427,19 +425,21 @@ export default function SchedulePage() {
         {/* 스케줄 그리드 */}
         {activeTrainers.length > 0 && (
           <div className="overflow-x-auto px-2">
-            <div style={{ minWidth: `${60 + activeTrainers.length * 130}px` }}>
+            <div style={{ minWidth: `${60 + activeTrainers.length * 150}px` }}>
 
               {/* 헤더: 트레이너명 */}
               <div
                 className="grid sticky top-12 z-10 bg-zinc-50"
                 style={{ gridTemplateColumns: `60px repeat(${activeTrainers.length}, 1fr)` }}
               >
-                <div className="h-12" /> {/* 시간 열 */}
+                <div className="h-12" />
                 {activeTrainers.map((t, i) => {
                   const color = TRAINER_COLORS[i % TRAINER_COLORS.length];
                   return (
-                    <div key={t.id}
-                      className={`h-12 flex items-center justify-center border-b-2 ${color.cell.split(" ")[0]} border-${color.cell.split("border-")[1]}`}>
+                    <div
+                      key={t.id}
+                      className={`h-12 flex items-center justify-center border-b-2 ${color.cell.split(" ")[0]} border-${color.cell.split("border-")[1]}`}
+                    >
                       <span className={`text-xs font-black ${color.header}`}>{t.name}</span>
                     </div>
                   );
@@ -458,45 +458,56 @@ export default function SchedulePage() {
                     <span className="text-xs text-zinc-400 font-mono">{time}</span>
                   </div>
 
-                  {/* 트레이너 셀 */}
+                  {/* 트레이너 셀 — 그룹은 여러 참가자 가능 */}
                   {activeTrainers.map((t, i) => {
-                    const entry = getEntry(selectedDate, time, t.id);
-                    const color = TRAINER_COLORS[i % TRAINER_COLORS.length];
+                    const entries = getGroupEntries(selectedDate, time, t.id);
+                    const color   = TRAINER_COLORS[i % TRAINER_COLORS.length];
+                    const groupSize = entries[0]?.groupSize ?? 0;
+                    const isFull = groupSize > 0 && entries.length >= groupSize;
+
                     return (
-                      <div
-                        key={t.id}
-                        className="border-l border-zinc-100 min-h-[52px] p-1 cursor-pointer hover:bg-zinc-50 transition"
-                        onClick={() => {
-                          if (entry) openEdit(entry);
-                          else openAdd(selectedDate, time, t);
-                        }}
-                      >
-                        {entry ? (() => {
-                          const entryPkg = entry.packageId
-                            ? (members.find((m) => m.id === entry.memberId)?.packages ?? [])
-                                .find((p) => p.id === entry.packageId)
-                            : undefined;
-                          const isGroup = entryPkg?.classType === "그룹";
-                          return (
-                            <div className={`rounded-lg border px-2 py-1.5 h-full ${color.cell} ${entry.done ? "opacity-50" : ""}`}>
-                              <p className={`text-xs font-bold truncate ${color.text}`}>
-                                {entry.done && "✓ "}{entry.memberName} 수업
-                              </p>
-                              {isGroup && (
-                                <span className="inline-block text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full leading-none mb-0.5">
-                                  그룹 {entryPkg?.groupSize}:1
+                      <div key={t.id} className="border-l border-zinc-100 min-h-[52px] p-1">
+                        {entries.length > 0 ? (
+                          <div className={`rounded-lg border px-2 py-1.5 h-full ${color.cell}`}>
+                            {/* 그룹 헤더 */}
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-[10px] font-black ${color.text}`}>
+                                그룹 {groupSize > 0 ? `${groupSize}:1` : ""} ({entries.length}명{groupSize > 0 ? `/${groupSize}` : ""})
+                              </span>
+                              {!isFull && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openAdd(selectedDate, time, t); }}
+                                  className="text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded font-bold hover:bg-purple-700 leading-none transition"
+                                >
+                                  +
+                                </button>
+                              )}
+                              {isFull && (
+                                <span className="text-[9px] bg-red-100 text-red-500 px-1 py-0.5 rounded font-bold">
+                                  마감
                                 </span>
                               )}
-                              {entryPkg && (
-                                <p className="text-xs opacity-60 truncate">{entryPkg.name}</p>
-                              )}
-                              {entry.note && (
-                                <p className={`text-xs opacity-60 truncate ${color.text}`}>{entry.note}</p>
-                              )}
                             </div>
-                          );
-                        })() : (
-                          <div className="flex items-center justify-center h-full">
+                            {/* 참가자 목록 */}
+                            {entries.map((entry) => (
+                              <button
+                                key={entry.id}
+                                onClick={() => openEdit(entry)}
+                                className={`block w-full text-left text-[10px] truncate py-0.5 px-0.5 rounded hover:bg-white/60 transition ${
+                                  entry.done
+                                    ? "line-through opacity-40 text-zinc-400"
+                                    : color.text
+                                }`}
+                              >
+                                {entry.done ? "✓ " : "· "}{entry.memberName}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div
+                            className="flex items-center justify-center h-full cursor-pointer hover:bg-zinc-50 transition rounded-lg"
+                            onClick={() => openAdd(selectedDate, time, t)}
+                          >
                             <span className="text-zinc-200 text-xs">−</span>
                           </div>
                         )}
@@ -513,9 +524,9 @@ export default function SchedulePage() {
         {dayEntries.length > 0 && (
           <div className="max-w-lg mx-auto px-2">
             <p className="text-xs font-semibold text-zinc-400 mb-2">
-              {selectedDate} 수업 {dayEntries.length}건
-              <span className="ml-2 text-emerald-500">완료 {dayEntries.filter((e) => e.done).length}건</span>
-              <span className="ml-2 text-zinc-300">미완료 {dayEntries.filter((e) => !e.done).length}건</span>
+              {selectedDate} 그룹 수업 참가자 {dayEntries.length}명
+              <span className="ml-2 text-emerald-500">완료 {dayEntries.filter((e) => e.done).length}명</span>
+              <span className="ml-2 text-zinc-300">미완료 {dayEntries.filter((e) => !e.done).length}명</span>
             </p>
           </div>
         )}
@@ -538,7 +549,6 @@ export default function SchedulePage() {
                 autoFocus
               />
             </div>
-            {/* 기존 지점 목록 */}
             {savedBranches.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-zinc-400 mb-1.5">등록된 지점</p>
@@ -555,16 +565,12 @@ export default function SchedulePage() {
               <button
                 onClick={() => { setShowBranchModal(false); setNewBranchName(""); }}
                 className="flex-1 rounded-xl border border-zinc-200 py-3 font-semibold text-zinc-600 hover:bg-zinc-50 transition"
-              >
-                취소
-              </button>
+              >취소</button>
               <button
                 onClick={handleAddBranch}
                 disabled={!newBranchName.trim()}
-                className="flex-[2] rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition"
-              >
-                추가
-              </button>
+                className="flex-[2] rounded-xl bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700 disabled:opacity-40 transition"
+              >추가</button>
             </div>
           </div>
         </div>
@@ -575,16 +581,17 @@ export default function SchedulePage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl p-6 w-full max-w-lg mx-0 sm:mx-4 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <p className="font-bold text-zinc-900 text-lg">
-                {editingId ? "일정 수정" : "일정 추가"}
-              </p>
+              <div>
+                <p className="font-bold text-zinc-900 text-lg">
+                  {editingId ? "참가자 수정" : "그룹 수업 참가자 추가"}
+                </p>
+                <p className="text-xs text-purple-600 mt-0.5">👥 그룹 수업 — 여러 명을 같은 시간대에 등록할 수 있습니다</p>
+              </div>
               {editingId && (
                 <button
                   onClick={() => handleDelete(editingId)}
                   className="text-xs text-red-400 hover:text-red-600 transition"
-                >
-                  삭제
-                </button>
+                >삭제</button>
               )}
             </div>
 
@@ -606,13 +613,15 @@ export default function SchedulePage() {
 
             {/* 트레이너 */}
             <Field label={`담당 ${staffTerm}`}>
-              <select value={formTrainerId}
+              <select
+                value={formTrainerId}
                 onChange={(e) => {
                   setFormTrainerId(e.target.value);
-                  // 트레이너 변경 시 회원·패키지 초기화
                   setFormMemberId("");
                   setFormPackageId("");
-                }} className={inputCls}>
+                }}
+                className={inputCls}
+              >
                 <option value="">{staffTerm} 선택</option>
                 {activeTrainers.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -620,53 +629,44 @@ export default function SchedulePage() {
                   </option>
                 ))}
               </select>
-              {activeTrainers.length === 0 && (
-                <p className="mt-1 text-xs text-zinc-400">
-                  {selectedBranch === "전체"
-                    ? `💡 ${staffTerm} 관리에서 먼저 등록하세요`
-                    : `💡 ${selectedBranch}에 소속된 ${staffTerm}가 없습니다`}
-                </p>
-              )}
             </Field>
 
-            {/* 회원 — 담당 트레이너 기준 필터 + 패키지명 표시 */}
-            <Field label="회원">
-              <select value={formMemberId}
+            {/* 회원 — 그룹 패키지 보유 회원만 */}
+            <Field label="참가 회원">
+              <select
+                value={formMemberId}
                 onChange={(e) => { setFormMemberId(e.target.value); setFormPackageId(""); }}
-                className={inputCls}>
+                className={inputCls}
+              >
                 <option value="">회원 선택</option>
                 {filteredMembersByTrainer.map((m) => {
-                  const activePkg = (m.packages ?? []).find(
-                    (p) => p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0
+                  const groupPkg = (m.packages ?? []).find(
+                    (p) =>
+                      p.classType === "그룹" &&
+                      (p.totalSessions === 0 || p.totalSessions - p.conductedSessions > 0)
                   );
-                  // 수업 유형 라벨: "1:1 PT" 또는 "그룹 N:1"
-                  const typeLabel = activePkg
-                    ? activePkg.classType === "그룹"
-                      ? `그룹 ${activePkg.groupSize}:1`
-                      : "1:1 PT"
-                    : null;
                   return (
                     <option key={m.id} value={m.id}>
-                      {m.name}{typeLabel ? ` (${typeLabel})` : m.phone ? ` (${m.phone})` : ""}
+                      {m.name}{groupPkg ? ` (그룹 ${groupPkg.groupSize}:1)` : ""}
                     </option>
                   );
                 })}
               </select>
               {formTrainerId && filteredMembersByTrainer.length === 0 && (
                 <p className="mt-1 text-xs text-zinc-400">
-                  💡 이 {staffTerm}에게 배정된 회원이 없습니다
+                  💡 이 {staffTerm}에게 배정된 그룹 수업 회원이 없습니다
                 </p>
               )}
               {!formTrainerId && (
                 <p className="mt-1 text-xs text-zinc-400">
-                  담당 {staffTerm}를 먼저 선택하면 해당 회원만 표시됩니다
+                  담당 {staffTerm}를 먼저 선택하면 그룹 수업 회원만 표시됩니다
                 </p>
               )}
             </Field>
 
-            {/* 패키지 연동 */}
+            {/* 그룹 패키지 연동 */}
             {formMemberId && (
-              <Field label="수업 패키지 연동 (선택)">
+              <Field label="그룹 수업 패키지 연동 (선택)">
                 <select value={formPackageId}
                   onChange={(e) => setFormPackageId(e.target.value)} className={inputCls}>
                   <option value="">패키지 미연동</option>
@@ -674,19 +674,22 @@ export default function SchedulePage() {
                     const remain = p.totalSessions - p.conductedSessions;
                     return (
                       <option key={p.id} value={p.id}>
-                        {p.name} (잔여 {remain}회)
+                        {p.name} — 그룹 {p.groupSize}:1 (잔여 {remain}회)
                       </option>
                     );
                   })}
                 </select>
-                {memberPackages.length === 0 && formMemberId && (
-                  <p className="mt-1 text-xs text-zinc-400">진행 중인 패키지가 없습니다</p>
+                {memberPackages.length === 0 && (
+                  <p className="mt-1 text-xs text-zinc-400">그룹 수업 패키지가 없습니다</p>
                 )}
-                {formPackageId && (
-                  <p className="mt-1 text-xs text-emerald-600">
-                    ✅ 완료 처리 시 패키지 진행 회차가 자동으로 +1 됩니다
-                  </p>
-                )}
+                {formPackageId && (() => {
+                  const pkg = memberPackages.find((p) => p.id === formPackageId);
+                  return pkg ? (
+                    <p className="mt-1 text-xs text-purple-600">
+                      👥 그룹 {pkg.groupSize}:1 | ✅ 완료 처리 시 패키지 진행 회차 +1
+                    </p>
+                  ) : null;
+                })()}
               </Field>
             )}
 
@@ -721,7 +724,7 @@ export default function SchedulePage() {
               <button
                 onClick={handleSubmit}
                 disabled={!formTrainerId || !formMemberId}
-                className="flex-[2] rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition"
+                className="flex-[2] rounded-xl bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700 disabled:opacity-40 transition"
               >
                 저장
               </button>

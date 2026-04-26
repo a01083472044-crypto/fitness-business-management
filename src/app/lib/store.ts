@@ -14,6 +14,8 @@ export interface ScheduleEntry {
   packageId: string;   // "" = 패키지 미연동
   note: string;
   done: boolean;       // 완료 여부
+  classType?: "1:1" | "그룹"; // 수업 유형 (없으면 1:1로 간주)
+  groupSize?: number;          // 그룹 수업 최대 인원
 }
 
 // ── 결제 수단 ──────────────────────────────────────────────────────────────
