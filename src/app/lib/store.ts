@@ -283,6 +283,52 @@ export function emptyCosts(month: string, branch = ""): MonthlyCosts {
   };
 }
 
+// ── 미수금 ─────────────────────────────────────────────────────────────────
+export interface Receivable {
+  id: string;
+  memberId: string;
+  memberName: string;
+  amount: number;
+  dueDate: string;    // YYYY-MM-DD
+  note: string;
+  paid: boolean;
+  paidAt: string;     // YYYY-MM-DD
+  createdAt: string;  // YYYY-MM-DD
+}
+
+// ── 세금계산서 ─────────────────────────────────────────────────────────────
+export interface TaxInvoice {
+  id: string;
+  issueDate: string;    // YYYY-MM-DD
+  buyerName: string;
+  buyerBizNo: string;   // 사업자등록번호
+  supplyAmount: number;
+  vatAmount: number;
+  total: number;
+  invoiceType: "세금계산서" | "계산서" | "현금영수증";
+  note: string;
+}
+
+const RECEIVABLES_KEY  = "gym_receivables";
+const TAX_INVOICES_KEY = "gym_tax_invoices";
+
+export function getReceivables(): Receivable[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(RECEIVABLES_KEY) || "[]"); } catch { return []; }
+}
+export function saveReceivables(list: Receivable[]) {
+  localStorage.setItem(RECEIVABLES_KEY, JSON.stringify(list));
+  pushToCloud("receivables", list);
+}
+export function getTaxInvoices(): TaxInvoice[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(TAX_INVOICES_KEY) || "[]"); } catch { return []; }
+}
+export function saveTaxInvoices(list: TaxInvoice[]) {
+  localStorage.setItem(TAX_INVOICES_KEY, JSON.stringify(list));
+  pushToCloud("taxInvoices", list);
+}
+
 /** 전체 회원 패키지에서 결제 수수료 합산 → 해당 월 비용에 반영 */
 export function syncPaymentFeeToCosts(members: Member[], month: string) {
   const totalFee = members.flatMap((m) => m.packages ?? [])

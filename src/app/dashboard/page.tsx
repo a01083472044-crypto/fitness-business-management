@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   getMembers, getCosts, getSchedules, getSettlements, getTrainers, getBranches,
+  getReceivables,
   emptyCosts, currentMonth, setPrefill,
   MonthlyCosts, ScheduleEntry, Member, TrainerSettlement,
 } from "../lib/store";
@@ -54,6 +56,7 @@ export default function DashboardPage() {
   const [settlements, setSettlements] = useState<TrainerSettlement[]>([]);
   const [trainerCount, setTrainerCount] = useState(0);
   const [sent, setSent] = useState(false);
+  const [todayData, setTodayData] = useState({ income: 0, sessions: 0, unpaidCount: 0, unpaidTotal: 0 });
   const [savedBranches, setSavedBranches] = useState<string[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
   const [allTrainers, setAllTrainers] = useState<ReturnType<typeof getTrainers>>([]);
@@ -61,11 +64,28 @@ export default function DashboardPage() {
   useEffect(() => {
     const trainers = getTrainers();
     setAllTrainers(trainers);
-    setSchedules(getSchedules());
-    setMembers(getMembers());
+    const allSchedules = getSchedules();
+    const allMembers   = getMembers();
+    setSchedules(allSchedules);
+    setMembers(allMembers);
     setSettlements(getSettlements());
     setTrainerCount(trainers.filter((t) => t.status === "재직").length);
     setSavedBranches(getBranches());
+    // 오늘 자금 현황
+    const today = new Date();
+    const td = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    const todayIncome = allMembers.flatMap((m) => m.packages ?? [])
+      .filter((p) => p.registeredAt === td)
+      .reduce((s, p) => s + p.paymentAmount, 0);
+    const todaySessions = allSchedules.filter((s) => s.date === td && s.done).length;
+    const rcvs = getReceivables();
+    const unpaidR = rcvs.filter((r) => !r.paid);
+    setTodayData({
+      income: todayIncome,
+      sessions: todaySessions,
+      unpaidCount: unpaidR.length,
+      unpaidTotal: unpaidR.reduce((s, r) => s + r.amount, 0),
+    });
   }, []);
 
   useEffect(() => {
@@ -211,6 +231,26 @@ export default function DashboardPage() {
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
             className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:border-blue-500" />
         </div>
+
+        {/* 오늘의 자금 현황 */}
+        <Link href="/cashflow"
+          className="grid grid-cols-3 gap-2 bg-gradient-to-r from-zinc-900 to-zinc-800 rounded-2xl p-4 hover:opacity-90 transition">
+          <div className="text-center">
+            <p className="text-xs text-zinc-400 mb-1">오늘 신규 등록</p>
+            <p className="text-lg font-black text-emerald-400">{fmtW(todayData.income)}</p>
+          </div>
+          <div className="text-center border-x border-zinc-700">
+            <p className="text-xs text-zinc-400 mb-1">완료 수업</p>
+            <p className="text-lg font-black text-blue-300">{todayData.sessions}회</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-zinc-400 mb-1">미수금</p>
+            <p className={`text-lg font-black ${todayData.unpaidCount > 0 ? "text-orange-400" : "text-zinc-500"}`}>
+              {todayData.unpaidCount > 0 ? `${todayData.unpaidCount}건` : "없음"}
+            </p>
+          </div>
+          <p className="col-span-3 text-center text-xs text-zinc-600 mt-1">📅 자금일보 보기 →</p>
+        </Link>
 
         {/* 지점 탭 */}
         {branches.length > 0 && (

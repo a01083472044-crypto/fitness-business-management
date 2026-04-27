@@ -3,8 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   getMembers, getSettlements, getTrainers, getCosts, getSchedules,
-  currentMonth,
+  getTaxInvoices, saveTaxInvoices,
+  currentMonth, TaxInvoice,
 } from "../lib/store";
+import { shareKakao } from "../lib/share";
 
 // ── 상수 ───────────────────────────────────────────────────────────────────
 const INS_RATE_EMPLOYER = 0.1065; // 사업주 4대보험+산재
@@ -116,12 +118,25 @@ function Row2({ label, value, bold, red, green, sub }: { label: string; value: s
 // ── 메인 ───────────────────────────────────────────────────────────────────
 export default function TaxPage() {
   const now = new Date();
+  const [mainTab,   setMainTab]   = useState<"세무계산" | "발행내역">("세무계산");
   const [bizType, setBizType] = useState<BizType>("개인일반");
   const [viewMonth, setViewMonth] = useState(currentMonth());
   const [selectedQ,    setSelectedQ]    = useState(getCurrentQ());      // 법인: 분기 1~4
   const [selectedHalf, setSelectedHalf] = useState(getCurrentHalf());   // 개인일반: 반기 1~2
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [annualRevInput, setAnnualRevInput] = useState(""); // 간이과세자 연매출 입력
+
+  // ── 세금계산서 상태 ────────────────────────────────────────────────────────
+  const [invoices,   setInvoices]   = useState<TaxInvoice[]>([]);
+  const [showInvForm, setShowInvForm] = useState(false);
+  const [invToast,   setInvToast]   = useState("");
+  // 폼
+  const [iDate,   setIDate]   = useState(currentMonth().slice(0, 7) + "-01");
+  const [iBuyer,  setIBuyer]  = useState("");
+  const [iBizNo,  setIBizNo]  = useState("");
+  const [iSupply, setISupply] = useState("");
+  const [iType,   setIType]   = useState<TaxInvoice["invoiceType"]>("세금계산서");
+  const [iNote,   setINote]   = useState("");
 
   const [members,     setMembers]     = useState([] as ReturnType<typeof getMembers>);
   const [settlements, setSettlements] = useState([] as ReturnType<typeof getSettlements>);
@@ -133,11 +148,15 @@ export default function TaxPage() {
     setSettlements(getSettlements());
     setAllCosts(getCosts());
     setSchedules(getSchedules());
+    setInvoices(getTaxInvoices());
     // localStorage에서 사업자 유형 복원
     const saved = localStorage.getItem("biz_type") as BizType | null;
     if (saved && ["법인", "개인일반", "간이"].includes(saved)) setBizType(saved);
     const savedRev = localStorage.getItem("annual_rev_input");
     if (savedRev) setAnnualRevInput(savedRev);
+    // 발행 내역 탭 초기 날짜
+    const td = new Date();
+    setIDate(`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,"0")}-${String(td.getDate()).padStart(2,"0")}`);
   }, []);
 
   const saveBizType = (t: BizType) => {
@@ -338,6 +357,49 @@ export default function TaxPage() {
     return list.sort((a, b) => a.date.localeCompare(b.date));
   }, [bizType, thisMonthW, thisMonthIns, vatAmount, incomeTaxEst]);
 
+  // ── 세금계산서 CRUD ───────────────────────────────────────────────────────
+  function saveInv(list: TaxInvoice[]) { setInvoices(list); saveTaxInvoices(list); }
+  function showInvToast(msg: string) { setInvToast(msg); setTimeout(() => setInvToast(""), 3000); }
+
+  function addInvoice() {
+    const supply = Number(iSupply.replace(/[^0-9]/g, ""));
+    if (!iBuyer || supply <= 0) return;
+    const vat   = iType === "세금계산서" ? Math.round(supply * 0.1) : 0;
+    const total = supply + vat;
+    const newInv: TaxInvoice = {
+      id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+      issueDate: iDate, buyerName: iBuyer, buyerBizNo: iBizNo,
+      supplyAmount: supply, vatAmount: vat, total,
+      invoiceType: iType, note: iNote,
+    };
+    saveInv([...invoices, newInv]);
+    setShowInvForm(false);
+    setIBuyer(""); setIBizNo(""); setISupply(""); setINote("");
+    showInvToast("✅ 발행 내역이 등록됐습니다.");
+  }
+  function delInvoice(id: string) {
+    if (!confirm("삭제하시겠습니까?")) return;
+    saveInv(invoices.filter((inv) => inv.id !== id));
+  }
+
+  // 세금계산서 발행 내역 카카오 공유
+  async function handleInvShare() {
+    const thisM = invoices.filter((inv) => inv.issueDate.startsWith(viewMonth));
+    const total = thisM.reduce((s, inv) => s + inv.total, 0);
+    const lines = [
+      `🧾 ${viewMonth} 세금계산서 발행 현황`,
+      "━━━━━━━━━━━━━━━━━━━",
+      `총 ${thisM.length}건 / ${fmtW(total)}`,
+      "━━━━━━━━━━━━━━━━━━━",
+      ...thisM.map((inv) => `· ${inv.issueDate} | ${inv.buyerName} | ${inv.invoiceType} | ${fmtW(inv.total)}`),
+      "━━━━━━━━━━━━━━━━━━━",
+      "📱 피트니스 경영 관리 시스템",
+    ];
+    const result = await shareKakao(lines.join("\n"), "세금계산서 발행 현황");
+    if (result === "copied") showInvToast("📋 복사됐습니다. 카카오톡에 붙여넣기 하세요.");
+    else if (result === "shared") showInvToast("✅ 공유 완료!");
+  }
+
   // ── 렌더링 ────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -348,6 +410,206 @@ export default function TaxPage() {
           <h1 className="text-2xl font-black text-zinc-900">🧾 세무 자동화 도우미</h1>
           <p className="text-sm text-zinc-500 mt-0.5">사업자 유형별 세금 자동 계산 · 세무사 기장 자료 자동화</p>
         </div>
+
+        {/* ── 메인 탭: 세무계산 / 발행 내역 ─────────────────────────────────── */}
+        <div className="flex gap-2">
+          {(["세무계산", "발행내역"] as const).map((t) => (
+            <button key={t} onClick={() => setMainTab(t)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${
+                mainTab === t ? "bg-zinc-900 text-white" : "bg-white border border-zinc-200 text-zinc-500"
+              }`}>
+              {t === "세무계산" ? "📊 세무 계산" : `🧾 발행 내역 (${invoices.length})`}
+            </button>
+          ))}
+        </div>
+
+        {/* ══════════════════ 발행 내역 탭 ══════════════════ */}
+        {mainTab === "발행내역" && (
+          <>
+            {/* 발행 내역 헤더 */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <input type="month" value={viewMonth} onChange={(e) => setViewMonth(e.target.value)}
+                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleInvShare}
+                  className="flex items-center gap-1 bg-yellow-400 text-zinc-900 text-xs font-black px-3 py-2 rounded-xl hover:bg-yellow-300 transition">
+                  💬 카카오
+                </button>
+                <button onClick={() => setShowInvForm(true)}
+                  className="bg-zinc-900 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-zinc-700 transition">
+                  + 발행 등록
+                </button>
+              </div>
+            </div>
+
+            {/* 이번달 요약 */}
+            {(() => {
+              const thisM = invoices.filter((inv) => inv.issueDate.startsWith(viewMonth));
+              const totalSupply = thisM.reduce((s, inv) => s + inv.supplyAmount, 0);
+              const totalVat    = thisM.reduce((s, inv) => s + inv.vatAmount, 0);
+              const totalAmt    = thisM.reduce((s, inv) => s + inv.total, 0);
+              return thisM.length > 0 ? (
+                <div className="bg-zinc-900 rounded-2xl p-5 text-white space-y-3">
+                  <p className="text-xs text-zinc-400">{viewMonth} 발행 현황</p>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <p className="text-xl font-black text-blue-300">{thisM.length}건</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">발행 건수</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-black text-emerald-300">{fmtW(totalSupply)}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">공급가액</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-black text-white">{fmtW(totalAmt)}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">합계 (VAT {fmtW(totalVat)})</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
+            {/* 발행 내역 목록 */}
+            <div className="space-y-3">
+              {invoices.filter((inv) => inv.issueDate.startsWith(viewMonth)).length === 0 ? (
+                <div className="bg-white rounded-2xl border border-zinc-100 p-10 text-center">
+                  <p className="text-4xl mb-3">🧾</p>
+                  <p className="text-zinc-500 text-sm font-medium">이번달 발행 내역 없음</p>
+                  <p className="text-zinc-400 text-xs mt-1">+ 발행 등록 버튼으로 추가하세요</p>
+                </div>
+              ) : (
+                invoices
+                  .filter((inv) => inv.issueDate.startsWith(viewMonth))
+                  .sort((a, b) => b.issueDate.localeCompare(a.issueDate))
+                  .map((inv) => (
+                    <div key={inv.id} className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-black text-zinc-900">{inv.buyerName}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                              inv.invoiceType === "세금계산서" ? "bg-blue-100 text-blue-700"
+                              : inv.invoiceType === "현금영수증" ? "bg-emerald-100 text-emerald-700"
+                              : "bg-zinc-100 text-zinc-600"
+                            }`}>{inv.invoiceType}</span>
+                          </div>
+                          <p className="text-xs text-zinc-400 mt-0.5">{inv.issueDate}{inv.buyerBizNo && ` · ${inv.buyerBizNo}`}</p>
+                          {inv.note && <p className="text-xs text-zinc-500 mt-0.5">{inv.note}</p>}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-black text-zinc-900">{fmtW(inv.total)}</p>
+                          <p className="text-xs text-zinc-400">공급: {fmtW(inv.supplyAmount)} + VAT: {fmtW(inv.vatAmount)}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => delInvoice(inv.id)}
+                        className="w-full py-2 bg-zinc-50 text-zinc-400 text-xs font-semibold rounded-xl hover:bg-red-50 hover:text-red-500 transition">
+                        삭제
+                      </button>
+                    </div>
+                  ))
+              )}
+
+              {/* 전체 내역 (다른 월 포함) */}
+              {invoices.filter((inv) => !inv.issueDate.startsWith(viewMonth)).length > 0 && (
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-xs text-zinc-400 font-semibold mb-2">이전 발행 내역 ({invoices.filter(inv => !inv.issueDate.startsWith(viewMonth)).length}건)</p>
+                  {invoices
+                    .filter((inv) => !inv.issueDate.startsWith(viewMonth))
+                    .sort((a, b) => b.issueDate.localeCompare(a.issueDate))
+                    .slice(0, 5)
+                    .map((inv) => (
+                      <div key={inv.id} className="flex justify-between items-center text-sm py-1.5 border-b border-zinc-100 last:border-0">
+                        <div>
+                          <p className="text-zinc-600 font-semibold">{inv.buyerName}</p>
+                          <p className="text-xs text-zinc-400">{inv.issueDate} · {inv.invoiceType}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-zinc-700">{fmtW(inv.total)}</p>
+                          <button onClick={() => delInvoice(inv.id)} className="text-zinc-300 hover:text-red-400 text-xs transition">✕</button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* 발행 등록 모달 */}
+            {showInvForm && (
+              <div className="fixed inset-0 bg-black/50 flex items-end z-50"
+                onClick={() => setShowInvForm(false)}>
+                <div className="bg-white w-full max-w-lg mx-auto rounded-t-3xl p-6 space-y-4"
+                  onClick={(e) => e.stopPropagation()}>
+                  <p className="font-black text-zinc-900 text-lg">세금계산서 발행 등록</p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-zinc-500 font-semibold block mb-1">발행일 *</label>
+                        <input type="date" value={iDate} onChange={(e) => setIDate(e.target.value)}
+                          className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-400" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-zinc-500 font-semibold block mb-1">종류</label>
+                        <select value={iType} onChange={(e) => setIType(e.target.value as TaxInvoice["invoiceType"])}
+                          className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-400 bg-white">
+                          <option value="세금계산서">세금계산서</option>
+                          <option value="계산서">계산서 (면세)</option>
+                          <option value="현금영수증">현금영수증</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500 font-semibold block mb-1">거래처 (공급받는자) *</label>
+                      <input type="text" value={iBuyer} onChange={(e) => setIBuyer(e.target.value)}
+                        placeholder="회사명 또는 개인명"
+                        className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-400" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500 font-semibold block mb-1">사업자등록번호 (선택)</label>
+                      <input type="text" value={iBizNo} onChange={(e) => setIBizNo(e.target.value)}
+                        placeholder="000-00-00000"
+                        className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-400" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500 font-semibold block mb-1">공급가액 *</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
+                        <input type="number" value={iSupply} onChange={(e) => setISupply(e.target.value)}
+                          placeholder="0"
+                          className="w-full rounded-xl border border-zinc-200 pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:border-zinc-400" />
+                      </div>
+                      {iType === "세금계산서" && Number(iSupply) > 0 && (
+                        <p className="text-xs text-zinc-400 mt-1">
+                          VAT: {fmtW(Math.round(Number(iSupply) * 0.1))} → 합계: {fmtW(Math.round(Number(iSupply) * 1.1))}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500 font-semibold block mb-1">메모 (선택)</label>
+                      <input type="text" value={iNote} onChange={(e) => setINote(e.target.value)}
+                        placeholder="품목, 계약 내용 등"
+                        className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-400" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => setShowInvForm(false)}
+                      className="flex-1 py-3 bg-zinc-100 text-zinc-600 font-bold rounded-xl hover:bg-zinc-200 transition">
+                      취소
+                    </button>
+                    <button onClick={addInvoice} disabled={!iBuyer || !iSupply}
+                      className="flex-1 py-3 bg-zinc-900 text-white font-bold rounded-xl disabled:opacity-40 hover:bg-zinc-700 transition">
+                      등록
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══════════════════ 세무계산 탭 (기존 내용) ══════════════════ */}
+        {mainTab === "세무계산" && (<>
 
         {/* ── 1. 사업자 유형 선택 ─────────────────────────────────────────── */}
         <Section title="사업자 유형 선택">
@@ -753,6 +1015,16 @@ export default function TaxPage() {
           <p>· 부가세 매출은 회원 패키지 등록 금액 기준입니다</p>
           <p>· 소득세는 각종 공제 전 추정액으로 실제와 다를 수 있습니다</p>
         </div>
+
+        {/* 세무계산 탭 닫기 */}
+        </>)}
+
+        {/* Toast (발행 내역 탭) */}
+        {invToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-xl whitespace-nowrap">
+            {invToast}
+          </div>
+        )}
       </div>
     </div>
   );
