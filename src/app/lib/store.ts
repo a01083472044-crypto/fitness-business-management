@@ -259,6 +259,7 @@ export function getBranches(): string[] {
 
 export function saveBranches(branches: string[]) {
   localStorage.setItem(BRANCHES_KEY, JSON.stringify(branches));
+  pushToCloud("branches", branches);
 }
 
 export function getSettlements(): TrainerSettlement[] {

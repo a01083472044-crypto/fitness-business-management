@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { StaffTermProvider } from "../context/StaffTermContext";
 import Nav from "./Nav";
 import KakaoAutoSender from "./KakaoAutoSender";
+import SyncBadge from "./SyncBadge";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname();
@@ -62,12 +63,15 @@ function AppShell({ children }: { children: React.ReactNode }) {
             ? "🔑 관리자 (전체 지점 접근)"
             : `📍 ${activeBranch || "미지정 지점"} · ${profile.full_name || profile.email}`}
         </span>
-        <button
-          onClick={signOut}
-          className="text-white/70 hover:text-white transition text-xs underline"
-        >
-          로그아웃
-        </button>
+        <div className="flex items-center gap-2">
+          <SyncBadge />
+          <button
+            onClick={signOut}
+            className="text-white/70 hover:text-white transition text-xs underline"
+          >
+            로그아웃
+          </button>
+        </div>
       </div>
       {children}
     </>
