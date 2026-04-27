@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "헬스장 관리",
-  description: "헬스장 비즈니스 관리 시스템",
+  title: "피트니스 경영 관리 시스템",
+  description: "피트니스 경영 관리 시스템",
 };
 
 export default function RootLayout({
