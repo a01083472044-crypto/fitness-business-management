@@ -268,7 +268,7 @@ function DeprCalcField({
                   {/* 자산명 */}
                   <input
                     type="text"
-                    placeholder="자산명 (예: 런닝머신, 인테리어)"
+                    placeholder="자산명 (예: 인테리어, 운동기구)"
                     value={a.name}
                     onChange={(e) => updateAsset(a.id, { name: e.target.value })}
                     className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
