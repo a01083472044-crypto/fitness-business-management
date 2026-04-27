@@ -32,6 +32,7 @@ export default function Nav() {
     { href: "/churn",       label: "⚠️ 이탈 감지"           },
     { href: "/cashflow",   label: "📅 자금일보"            },
     { href: "/receivables",label: "💰 미수금 관리"         },
+    { href: "/payment",    label: "💳 결제 수단별"         },
     { href: "/tax",        label: "🧾 세무 도우미"         },
     { href: "/dashboard",  label: "대시보드"               },
     { href: "/",           label: "계산기"                 },

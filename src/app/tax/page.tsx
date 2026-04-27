@@ -7,6 +7,7 @@ import {
   currentMonth, TaxInvoice,
 } from "../lib/store";
 import { shareKakao } from "../lib/share";
+import { KakaoStore, initKakao, sendKakaoMemo } from "../lib/kakao";
 
 // ── 상수 ───────────────────────────────────────────────────────────────────
 const INS_RATE_EMPLOYER = 0.1065; // 사업주 4대보험+산재
@@ -118,7 +119,9 @@ function Row2({ label, value, bold, red, green, sub }: { label: string; value: s
 // ── 메인 ───────────────────────────────────────────────────────────────────
 export default function TaxPage() {
   const now = new Date();
-  const [mainTab,   setMainTab]   = useState<"세무계산" | "발행내역">("세무계산");
+  const [mainTab,   setMainTab]   = useState<"세무계산" | "발행내역" | "세금 캘린더">("세무계산");
+  const [calYear,   setCalYear]   = useState(now.getFullYear());
+  const [calSending, setCalSending] = useState(false);
   const [bizType, setBizType] = useState<BizType>("개인일반");
   const [viewMonth, setViewMonth] = useState(currentMonth());
   const [selectedQ,    setSelectedQ]    = useState(getCurrentQ());      // 법인: 분기 1~4
@@ -411,14 +414,16 @@ export default function TaxPage() {
           <p className="text-sm text-zinc-500 mt-0.5">사업자 유형별 세금 자동 계산 · 세무사 기장 자료 자동화</p>
         </div>
 
-        {/* ── 메인 탭: 세무계산 / 발행 내역 ─────────────────────────────────── */}
+        {/* ── 메인 탭: 세무계산 / 발행 내역 / 세금 캘린더 ─────────────────── */}
         <div className="flex gap-2">
-          {(["세무계산", "발행내역"] as const).map((t) => (
+          {(["세무계산", "발행내역", "세금 캘린더"] as const).map((t) => (
             <button key={t} onClick={() => setMainTab(t)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition ${
                 mainTab === t ? "bg-zinc-900 text-white" : "bg-white border border-zinc-200 text-zinc-500"
               }`}>
-              {t === "세무계산" ? "📊 세무 계산" : `🧾 발행 내역 (${invoices.length})`}
+              {t === "세무계산" ? "📊 세무 계산"
+               : t === "발행내역" ? `🧾 발행 내역`
+               : "📅 세금 캘린더"}
             </button>
           ))}
         </div>
@@ -1018,6 +1023,300 @@ export default function TaxPage() {
 
         {/* 세무계산 탭 닫기 */}
         </>)}
+
+        {/* ══════════════════ 세금 캘린더 탭 ══════════════════ */}
+        {mainTab === "세금 캘린더" && (() => {
+          // ── ICS 생성 유틸 ───────────────────────────────────────────────
+          function nextDayStr(date: string) {
+            const d = new Date(date);
+            d.setDate(d.getDate() + 1);
+            return d.toISOString().slice(0, 10).replace(/-/g, "");
+          }
+          interface CalEvent { date: string; title: string; desc: string; tag: "vat"|"income"|"withholding"|"insurance"|"etc"; }
+
+          function buildEvents(y: number): CalEvent[] {
+            const evts: CalEvent[] = [];
+            // 매월 10일: 원천징수·4대보험
+            for (let m = 1; m <= 12; m++) {
+              const prevM = m === 1 ? 12 : m - 1;
+              const prevY = m === 1 ? y - 1 : y;
+              const prevMStr = `${prevY}-${String(prevM).padStart(2, "0")}`;
+              const wht = settlements.filter((s) => s.month === prevMStr && s.settled && s.empType === "프리랜서")
+                .reduce((sum, s) => sum + (s.withholdingTax ?? 0), 0);
+              const mStr = `${y}-${String(m).padStart(2, "0")}`;
+              const ins  = settlements.filter((s) => s.month === mStr && s.settled && s.empType === "정규직")
+                .reduce((sum, s) => sum + s.grossSalary, 0);
+              evts.push({
+                date: `${y}-${String(m).padStart(2, "0")}-10`,
+                title: `원천징수세 납부 (${prevM}월분)`,
+                desc: `프리랜서 원천징수세 납부 (다음달 10일)${wht > 0 ? `\\n예정액: ${fmtW(wht)}` : ""}`,
+                tag: "withholding",
+              });
+              evts.push({
+                date: `${y}-${String(m).padStart(2, "0")}-10`,
+                title: `4대보험 납부 (${m}월분)`,
+                desc: `정규직 4대보험 사업주+근로자분 납부${ins > 0 ? `\\n예정액: ${fmtW(Math.round(ins * (0.1065 + 0.0908)))}` : ""}\\n납부처: EDI / 4대보험 포털`,
+                tag: "insurance",
+              });
+            }
+            // VAT / 소득세 / 법인세
+            if (bizType === "법인") {
+              evts.push(
+                { date: `${y}-04-25`, title: "부가세 1분기 신고·납부", desc: "1~3월 매출 부가세 신고\\n홈택스 부가가치세 신고", tag: "vat" },
+                { date: `${y}-07-25`, title: "부가세 2분기 신고·납부 (1기 확정)", desc: "4~6월 매출 부가세 신고\\n홈택스 부가가치세 신고", tag: "vat" },
+                { date: `${y}-10-25`, title: "부가세 3분기 신고·납부", desc: "7~9월 매출 부가세 신고\\n홈택스 부가가치세 신고", tag: "vat" },
+                { date: `${y + 1}-01-25`, title: "부가세 4분기 신고·납부 (2기 확정)", desc: "10~12월 매출 부가세 신고\\n홈택스 부가가치세 신고", tag: "vat" },
+                { date: `${y + 1}-03-31`, title: "법인세 신고·납부", desc: `${y}년 귀속 법인세\\n사업연도 종료 후 3개월 이내`, tag: "income" },
+              );
+            } else if (bizType === "개인일반") {
+              evts.push(
+                { date: `${y}-04-25`, title: "부가세 예정고지 1기 (자동)", desc: "전기 납부액의 50% 자동고지\\n별도 신고 불필요", tag: "etc" },
+                { date: `${y}-07-25`, title: "부가세 1기 확정신고 (1~6월)", desc: "1~6월 매출 부가세 확정 신고\\n홈택스 부가가치세 신고", tag: "vat" },
+                { date: `${y}-10-25`, title: "부가세 예정고지 2기 (자동)", desc: "전기 납부액의 50% 자동고지\\n별도 신고 불필요", tag: "etc" },
+                { date: `${y + 1}-01-25`, title: "부가세 2기 확정신고 (7~12월)", desc: "7~12월 매출 부가세 확정 신고\\n홈택스 부가가치세 신고", tag: "vat" },
+                { date: `${y + 1}-05-31`, title: "종합소득세 신고·납부", desc: `${y}년 귀속 종합소득세\\n홈택스 종합소득세 신고`, tag: "income" },
+              );
+            } else {
+              evts.push(
+                { date: `${y + 1}-01-25`, title: "간이과세 부가세 신고 (연 1회)", desc: `${y}년 귀속 간이과세 부가세\\n홈택스 부가가치세 신고`, tag: "vat" },
+                { date: `${y + 1}-05-31`, title: "종합소득세 신고·납부", desc: `${y}년 귀속 종합소득세\\n홈택스 종합소득세 신고`, tag: "income" },
+              );
+            }
+            return evts.sort((a, b) => a.date.localeCompare(b.date));
+          }
+
+          function generateICS(evts: CalEvent[]): string {
+            const lines = [
+              "BEGIN:VCALENDAR",
+              "VERSION:2.0",
+              "PRODID:-//피트니스 경영 관리 시스템//KO",
+              "CALSCALE:GREGORIAN",
+              "METHOD:PUBLISH",
+              "X-WR-CALNAME:세금 신고 일정",
+              "X-WR-TIMEZONE:Asia/Seoul",
+            ];
+            for (const e of evts) {
+              const d = e.date.replace(/-/g, "");
+              lines.push(
+                "BEGIN:VEVENT",
+                `DTSTART;VALUE=DATE:${d}`,
+                `DTEND;VALUE=DATE:${nextDayStr(e.date)}`,
+                `SUMMARY:${e.title}`,
+                `DESCRIPTION:${e.desc}`,
+                `UID:${d}-${e.title.replace(/\s/g, "")}-gym@system`,
+                "STATUS:CONFIRMED",
+                "END:VEVENT",
+              );
+            }
+            lines.push("END:VCALENDAR");
+            return lines.join("\r\n");
+          }
+
+          function downloadICS(content: string, fname: string) {
+            const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement("a");
+            a.href = url; a.download = fname; a.click();
+            URL.revokeObjectURL(url);
+          }
+
+          async function handleCalKakao() {
+            const evts = buildEvents(calYear);
+            // VAT / income 이벤트만 카카오로 전송 (매월 반복 항목 제외)
+            const important = evts.filter((e) => e.tag === "vat" || e.tag === "income");
+            const lines = [
+              `📅 ${calYear}년 세금 신고 일정 (${bizType === "법인" ? "법인사업자" : bizType === "개인일반" ? "개인일반과세" : "간이과세"})`,
+              "━━━━━━━━━━━━━━━━━━━━━",
+              ...important.map((e) => `· ${e.date} — ${e.title}`),
+              "━━━━━━━━━━━━━━━━━━━━━",
+              "📌 매월 10일: 원천징수세 납부 · 4대보험 납부",
+              "━━━━━━━━━━━━━━━━━━━━━",
+              "📱 피트니스 경영 관리 시스템",
+            ];
+            const text = lines.join("\n");
+            const appKey = KakaoStore.getAppKey();
+            const token  = KakaoStore.getToken();
+            setCalSending(true);
+            try {
+              if (appKey && token) {
+                await initKakao(appKey);
+                await sendKakaoMemo(text);
+                setInvToast("✅ 카카오톡으로 전송됐습니다");
+              } else if (typeof navigator !== "undefined" && navigator.share) {
+                await navigator.share({ title: `${calYear}년 세금 일정`, text });
+                setInvToast("✅ 공유 완료");
+              } else {
+                await navigator.clipboard.writeText(text);
+                setInvToast("📋 복사됐습니다. 카카오톡에 붙여넣기 하세요.");
+              }
+            } catch (e) {
+              setInvToast(`❌ ${(e as Error).message}`);
+            } finally {
+              setCalSending(false);
+            }
+          }
+
+          const calEvents = buildEvents(calYear);
+
+          // 월별로 그룹화
+          const grouped: Record<string, CalEvent[]> = {};
+          for (const e of calEvents) {
+            const key = e.date.slice(0, 7);
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(e);
+          }
+
+          const TAG_COLOR: Record<string, string> = {
+            vat:          "text-red-600 bg-red-50 border-red-200",
+            income:       "text-indigo-700 bg-indigo-50 border-indigo-200",
+            withholding:  "text-orange-600 bg-orange-50 border-orange-200",
+            insurance:    "text-blue-600 bg-blue-50 border-blue-200",
+            etc:          "text-zinc-400 bg-zinc-50 border-zinc-200",
+          };
+          const TAG_LABEL: Record<string, string> = {
+            vat:         "부가세",
+            income:      "소득·법인세",
+            withholding: "원천징수",
+            insurance:   "4대보험",
+            etc:         "자동",
+          };
+
+          const korMonths = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+
+          return (
+            <>
+              {/* 헤더 + 내보내기 */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <select value={calYear} onChange={(e) => setCalYear(Number(e.target.value))}
+                    className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none">
+                    {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
+                      <option key={y} value={y}>{y}년</option>
+                    ))}
+                  </select>
+                  <span className={`text-xs px-2 py-1 rounded-lg font-bold ${cfg.bg} ${cfg.color}`}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => downloadICS(generateICS(calEvents), `세금일정_${calYear}.ics`)}
+                    className="flex items-center gap-1 bg-blue-600 text-white text-xs font-black px-3 py-2 rounded-xl hover:bg-blue-700 transition">
+                    📅 구글 캘린더
+                  </button>
+                  <button onClick={handleCalKakao} disabled={calSending}
+                    className="flex items-center gap-1 bg-yellow-400 text-zinc-900 text-xs font-black px-3 py-2 rounded-xl hover:bg-yellow-300 transition disabled:opacity-40">
+                    {calSending ? "⏳" : "💬 카카오"}
+                  </button>
+                </div>
+              </div>
+
+              {/* 내보내기 안내 */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 space-y-1">
+                <p className="font-semibold">📅 구글 캘린더 저장 방법</p>
+                <p>① 위 버튼 클릭 → .ics 파일 다운로드</p>
+                <p>② 구글 캘린더 앱/웹 → 설정 → 다른 캘린더 가져오기 → 파일 선택</p>
+                <p>③ 또는 다운받은 파일을 더블클릭 (자동으로 캘린더 앱 연동)</p>
+              </div>
+
+              {/* 매월 반복 항목 배너 */}
+              <div className="bg-zinc-100 rounded-xl p-3 text-xs text-zinc-600 space-y-1">
+                <p className="font-black text-zinc-700">📌 매월 반복 납부 (10일)</p>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+                    원천징수세 납부 (전월 프리랜서분)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                    4대보험 납부 (당월 정규직분)
+                  </span>
+                </div>
+              </div>
+
+              {/* 월별 주요 일정 */}
+              <div className="space-y-3">
+                {Object.entries(grouped)
+                  .filter(([, evts]) => evts.some((e) => e.tag === "vat" || e.tag === "income" || e.tag === "etc"))
+                  .map(([monthKey, evts]) => {
+                    const [y, m] = monthKey.split("-");
+                    const important = evts.filter((e) => e.tag === "vat" || e.tag === "income" || e.tag === "etc");
+                    if (important.length === 0) return null;
+                    const isNextYear = Number(y) > calYear;
+                    return (
+                      <div key={monthKey} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                        <div className={`px-4 py-2 flex items-center justify-between ${isNextYear ? "bg-zinc-50" : "bg-white"}`}>
+                          <p className="font-black text-zinc-800 text-sm">
+                            {isNextYear ? `${y}년 ` : ""}{korMonths[Number(m) - 1]}
+                          </p>
+                          {isNextYear && <span className="text-xs text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">내년</span>}
+                        </div>
+                        <div className="px-4 pb-4 space-y-2">
+                          {important.map((e, i) => (
+                            <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${TAG_COLOR[e.tag]}`}>
+                              <div className="text-center min-w-[36px]">
+                                <p className="text-lg font-black">{Number(e.date.split("-")[2])}</p>
+                                <p className="text-xs opacity-60">일</p>
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="text-sm font-bold">{e.title}</p>
+                                  <span className={`text-xs px-1.5 py-0.5 rounded font-semibold border ${TAG_COLOR[e.tag]}`}>
+                                    {TAG_LABEL[e.tag]}
+                                  </span>
+                                </div>
+                                <p className="text-xs opacity-70 mt-0.5 whitespace-pre-line">
+                                  {e.desc.replace(/\\n/g, "\n")}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* 월별 원천징수·4대보험 상세 (접기) */}
+              <details className="group bg-white rounded-2xl border border-zinc-100">
+                <summary className="px-4 py-3 text-sm font-bold text-zinc-700 cursor-pointer flex justify-between items-center">
+                  <span>📋 월별 원천징수·4대보험 납부 내역</span>
+                  <span className="text-zinc-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const m = i + 1;
+                    const mStr = `${calYear}-${String(m).padStart(2, "0")}`;
+                    const prevMStr = m === 1 ? `${calYear - 1}-12` : `${calYear}-${String(m - 1).padStart(2, "0")}`;
+                    const wht = settlements.filter((s) => s.month === prevMStr && s.settled && s.empType === "프리랜서")
+                      .reduce((sum, s) => sum + (s.withholdingTax ?? 0), 0);
+                    const ins = settlements.filter((s) => s.month === mStr && s.settled && s.empType === "정규직")
+                      .reduce((sum, s) => sum + s.grossSalary, 0) * (0.1065 + 0.0908);
+                    return (
+                      <div key={m} className="bg-zinc-50 rounded-xl p-3 text-xs space-y-1">
+                        <p className="font-bold text-zinc-700">{korMonths[i]} 10일</p>
+                        <p className={`${wht > 0 ? "text-orange-600" : "text-zinc-300"}`}>
+                          원천: {wht > 0 ? fmtW(wht) : "—"}
+                        </p>
+                        <p className={`${ins > 0 ? "text-blue-600" : "text-zinc-300"}`}>
+                          4대보험: {ins > 0 ? fmtW(Math.round(ins)) : "—"}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+
+              {/* 사업자 유형 변경 안내 */}
+              <div className="bg-zinc-50 rounded-xl p-3 text-xs text-zinc-500 space-y-1">
+                <p className="font-semibold text-zinc-600">📌 캘린더는 세무계산 탭의 사업자 유형 기준으로 생성됩니다</p>
+                <p>· 법인: 분기 4회 부가세 신고 + 법인세 (3월 31일)</p>
+                <p>· 개인일반: 반기 2회 부가세 신고 + 종합소득세 (5월 31일)</p>
+                <p>· 간이: 연 1회 부가세 신고 + 종합소득세 (5월 31일)</p>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Toast (발행 내역 탭) */}
         {invToast && (

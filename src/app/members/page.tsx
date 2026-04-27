@@ -522,21 +522,29 @@ export default function MembersPage() {
             {/* 결제 수단 */}
             <div className="space-y-3">
               <label className="block text-xs font-semibold text-zinc-500">결제 수단</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["카드", "현금", "지역화폐"] as PaymentMethod[]).map((m) => (
+              <div className="flex flex-wrap gap-2">
+                {(["카드", "현금", "계좌이체", "간편결제", "지역화폐"] as PaymentMethod[]).map((m) => (
                   <button key={m} type="button"
                     onClick={() => setPaymentMethod(paymentMethod === m ? "" : m)}
-                    className={`py-2.5 rounded-xl text-sm font-semibold border transition ${
+                    className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-sm font-semibold border transition ${
                       paymentMethod === m
-                        ? m === "카드"     ? "bg-blue-600 text-white border-blue-600"
-                        : m === "현금"    ? "bg-emerald-500 text-white border-emerald-500"
+                        ? m === "카드"      ? "bg-blue-600 text-white border-blue-600"
+                        : m === "현금"     ? "bg-emerald-500 text-white border-emerald-500"
+                        : m === "계좌이체" ? "bg-indigo-500 text-white border-indigo-500"
+                        : m === "간편결제" ? "bg-orange-500 text-white border-orange-500"
                         : "bg-purple-500 text-white border-purple-500"
                         : "bg-white text-zinc-500 border-zinc-200"
                     }`}>
-                    {m === "카드" ? "💳 카드" : m === "현금" ? "💵 현금" : "🏷️ 지역화폐"}
+                    {m === "카드" ? "💳 카드" : m === "현금" ? "💵 현금" : m === "계좌이체" ? "🏦 이체" : m === "간편결제" ? "📱 간편" : "🏷️ 지역화폐"}
                   </button>
                 ))}
               </div>
+              {paymentMethod === "간편결제" && (
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 text-xs text-orange-700 space-y-0.5">
+                  <p className="font-semibold">📱 간편결제 수수료 (카카오페이·네이버페이 등)</p>
+                  <p>소상공인 기준 약 1.5% 자동 적용</p>
+                </div>
+              )}
 
               {/* 카드 수수료율 — 연매출 구간 선택 */}
               {paymentMethod === "카드" && (
