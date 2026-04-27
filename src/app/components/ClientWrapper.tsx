@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { StaffTermProvider } from "../context/StaffTermContext";
 import Nav from "./Nav";
+import KakaoAutoSender from "./KakaoAutoSender";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname();
@@ -50,6 +51,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <KakaoAutoSender />
       <Nav />
       {/* 지점 배너 */}
       <div className={`px-4 py-1.5 text-xs font-semibold flex items-center justify-between ${

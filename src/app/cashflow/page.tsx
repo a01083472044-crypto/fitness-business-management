@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   getMembers, getSchedules, getCosts, getReceivables,
   emptyCosts, Member, ScheduleEntry,
 } from "../lib/store";
 import { shareKakao } from "../lib/share";
+import {
+  KakaoStore, initKakao, sendKakaoMemo, notifySWSent,
+} from "../lib/kakao";
 
 function fmtW(n: number) { return "₩" + Math.round(n).toLocaleString("ko-KR"); }
 function todayStr() {
@@ -18,16 +22,77 @@ function monthOf(date: string) { return date.slice(0, 7); }
 const INS_RATE = 0.1065;
 
 export default function CashflowPage() {
+  const searchParams   = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(todayStr());
-  const [members,   setMembers]   = useState<Member[]>([]);
-  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
-  const [allCosts,  setAllCosts]  = useState<ReturnType<typeof getCosts>>([]);
-  const [toast,     setToast]     = useState("");
+  const [members,      setMembers]      = useState<Member[]>([]);
+  const [schedules,    setSchedules]    = useState<ScheduleEntry[]>([]);
+  const [allCosts,     setAllCosts]     = useState<ReturnType<typeof getCosts>>([]);
+  const [toast,        setToast]        = useState("");
+  const [kakaoLoading, setKakaoLoading] = useState(false);
+  const [kakaoLinked,  setKakaoLinked]  = useState(false);
+  const [lastSent,     setLastSent]     = useState("");
 
   useEffect(() => {
     setMembers(getMembers());
     setSchedules(getSchedules());
     setAllCosts(getCosts());
+    setKakaoLinked(!!KakaoStore.getToken());
+    setLastSent(KakaoStore.getLastSent());
+  }, []);
+
+  // buildShareText는 아래에서 선언되지만 useCallback으로 먼저 선언
+  // (autoSend 트리거에서 사용하기 위해 ref 패턴 사용)
+  const buildTextRef = useCallback(() => {
+    const lines = [
+      `📅 ${todayStr()} 자금일보`,
+      "━━━━━━━━━━━━━━━━━━━",
+      `💳 신규 등록: 앱에서 확인`,
+      "📱 피트니스 경영 관리 시스템",
+    ];
+    return lines.join("\n");
+  }, []);
+
+  // ── 카카오 나에게 보내기 ──────────────────────────────────────────────────
+  async function handleKakaoSend(text: string) {
+    if (!KakaoStore.getToken()) {
+      showToast("⚠️ 설정에서 카카오 로그인을 먼저 해주세요.");
+      return;
+    }
+    setKakaoLoading(true);
+    try {
+      await initKakao();
+      await sendKakaoMemo(text);
+      KakaoStore.markSent();
+      notifySWSent();
+      setLastSent(KakaoStore.getLastSent());
+      showToast("✅ 카카오톡으로 전송됐습니다!");
+    } catch (e) {
+      const msg = (e as Error).message;
+      showToast(`❌ ${msg}`);
+    } finally {
+      setKakaoLoading(false);
+    }
+  }
+
+  // ── URL ?autoSend=1 → 자동 전송 트리거 (알림 클릭 시) ──────────────────
+  useEffect(() => {
+    if (searchParams.get("autoSend") === "1" && KakaoStore.getToken() && !KakaoStore.isSentToday()) {
+      // 약간 딜레이 후 전송 (데이터 로드 완료 대기)
+      const t = setTimeout(() => handleKakaoSend(buildTextRef()), 1500);
+      return () => clearTimeout(t);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // ── 전역 자동 전송 결과 수신 (KakaoAutoSender → CustomEvent) ───────────
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { ok, msg } = (e as CustomEvent).detail;
+      showToast(msg);
+      if (ok) setLastSent(KakaoStore.getLastSent());
+    };
+    window.addEventListener("kakao-auto-result", handler);
+    return () => window.removeEventListener("kakao-auto-result", handler);
   }, []);
 
   const selMonth = monthOf(selectedDate);
@@ -137,9 +202,15 @@ export default function CashflowPage() {
   }
 
   async function handleShare() {
-    const result = await shareKakao(buildShareText(), `${selectedDate} 자금일보`);
-    if (result === "copied") showToast("📋 클립보드에 복사됐습니다. 카카오톡에 붙여넣기 하세요.");
-    else if (result === "shared") showToast("✅ 공유 완료!");
+    const text = buildShareText();
+    // 카카오 연동 시 나에게 보내기 우선, 없으면 Web Share 폴백
+    if (kakaoLinked) {
+      await handleKakaoSend(text);
+    } else {
+      const result = await shareKakao(text, `${selectedDate} 자금일보`);
+      if (result === "copied") showToast("📋 클립보드에 복사됐습니다. 카카오톡에 붙여넣기 하세요.\n💡 설정에서 카카오 연동 시 자동 전송 가능!");
+      else if (result === "shared") showToast("✅ 공유 완료!");
+    }
   }
 
   function showToast(msg: string) {
@@ -161,13 +232,49 @@ export default function CashflowPage() {
             className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:border-blue-500" />
         </div>
 
+        {/* 카카오 자동 전송 상태 배너 */}
+        {(() => {
+          const enabled = KakaoStore.isEnabled();
+          const linked  = KakaoStore.getToken();
+          const time    = KakaoStore.getTime();
+          const sentToday = KakaoStore.isSentToday();
+
+          if (sentToday) return (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm text-emerald-700 font-semibold">
+              ✅ 오늘 자금일보 전송 완료
+            </div>
+          );
+          if (enabled && linked) return (
+            <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2.5">
+              <p className="text-sm text-yellow-800 font-semibold">💬 매일 {time} 자동 전송 예약 중</p>
+              <Link href="/settings" className="text-xs text-yellow-600 underline">설정</Link>
+            </div>
+          );
+          return (
+            <div className="flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5">
+              <p className="text-sm text-zinc-500">카카오 자동 전송 미설정</p>
+              <Link href="/settings" className="text-xs text-blue-600 font-bold underline">설정하기 →</Link>
+            </div>
+          );
+        })()}
+
         {/* 오늘 요약 다크카드 */}
         <div className="bg-zinc-900 rounded-2xl p-5 text-white space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-400 font-semibold">{selectedDate} 자금 현황</p>
-            <button onClick={handleShare}
-              className="flex items-center gap-1.5 bg-yellow-400 text-zinc-900 text-xs font-black px-3 py-1.5 rounded-xl hover:bg-yellow-300 transition">
-              <span>💬</span> 카카오톡 전송
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <p className="text-xs text-zinc-400 font-semibold">{selectedDate} 자금 현황</p>
+              {lastSent && <p className="text-xs text-zinc-600 mt-0.5">마지막 전송: {lastSent}</p>}
+            </div>
+            <button onClick={handleShare} disabled={kakaoLoading}
+              className={`flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition ${
+                kakaoLinked
+                  ? "bg-yellow-400 text-zinc-900 hover:bg-yellow-300"
+                  : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+              }`}>
+              {kakaoLoading
+                ? <span className="w-3 h-3 border-2 border-zinc-600 border-t-transparent rounded-full animate-spin" />
+                : <span>💬</span>}
+              {kakaoLinked ? "카카오 전송" : "카카오톡 공유"}
             </button>
           </div>
           <div className="grid grid-cols-3 gap-3 text-center">
