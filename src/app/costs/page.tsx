@@ -200,6 +200,106 @@ export default function CostsPage() {
         >
           {saved ? "✓ 저장됨" : "저장하기"}
         </button>
+
+        {/* ── 비용 구조 분석 차트 ── */}
+        {(totalFixed + totalVariable) > 0 && (() => {
+          const grandTotal = totalFixed + totalVariable;
+          const salary     = costs.trainerSalary * (1 + 0.1065) + costs.freelanceSalary * 1.033;
+          const space      = costs.rent + (costs.managementFee ?? 0);
+          const utility    = costs.utilities + costs.communication;
+          const depre      = costs.depreciation;
+          const otherF     = costs.otherFixed;
+          const supplies   = costs.supplies;
+          const marketing  = costs.marketing;
+          const parking    = costs.parkingFee ?? 0;
+          const payFee     = costs.paymentFee ?? 0;
+          const otherV     = costs.otherVariable;
+
+          const items = [
+            { label: "인건비",     amount: salary,  color: "bg-blue-500"   },
+            { label: "임대료·관리비", amount: space, color: "bg-violet-500" },
+            { label: "공과금·통신", amount: utility, color: "bg-cyan-500"   },
+            { label: "감가상각",    amount: depre,   color: "bg-indigo-400" },
+            { label: "기타 고정비", amount: otherF,  color: "bg-zinc-400"   },
+            { label: "소모품비",    amount: supplies,color: "bg-emerald-500" },
+            { label: "마케팅",      amount: marketing,color: "bg-orange-500"},
+            { label: "주차비",      amount: parking, color: "bg-yellow-500"  },
+            { label: "결제수수료",  amount: payFee,  color: "bg-pink-400"   },
+            { label: "기타 변동비", amount: otherV,  color: "bg-zinc-300"   },
+          ].filter((i) => i.amount > 0);
+
+          return (
+            <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-5">
+              <div className="flex items-center justify-between">
+                <p className="font-bold text-zinc-900">📊 비용 구조 분석</p>
+                <p className="text-sm font-black text-zinc-700">{formatKRW(grandTotal)}</p>
+              </div>
+
+              {/* 누적 바 차트 */}
+              <div>
+                <div className="flex h-5 rounded-full overflow-hidden gap-px">
+                  {items.map((item) => (
+                    <div
+                      key={item.label}
+                      className={`${item.color} transition-all`}
+                      style={{ width: `${(item.amount / grandTotal) * 100}%` }}
+                      title={`${item.label}: ${formatKRW(item.amount)}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* 항목별 수평 바 + 수치 */}
+              <div className="space-y-2.5">
+                {items.map((item) => {
+                  const pct = (item.amount / grandTotal) * 100;
+                  return (
+                    <div key={item.label} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.color}`} />
+                          <span className="text-zinc-600 font-medium">{item.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-zinc-400">{pct.toFixed(1)}%</span>
+                          <span className="font-bold text-zinc-800 w-24 text-right">{formatKRW(item.amount)}</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
+                        <div className={`h-1.5 rounded-full ${item.color}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 고정/변동 비율 */}
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-zinc-50">
+                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-zinc-400">고정비 비율</p>
+                  <p className="text-xl font-black text-blue-700 mt-0.5">
+                    {((totalFixed / grandTotal) * 100).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-blue-500 mt-0.5">{formatKRW(totalFixed)}</p>
+                </div>
+                <div className="bg-orange-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-zinc-400">변동비 비율</p>
+                  <p className="text-xl font-black text-orange-600 mt-0.5">
+                    {((totalVariable / grandTotal) * 100).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-orange-500 mt-0.5">{formatKRW(totalVariable)}</p>
+                </div>
+              </div>
+
+              {/* 인건비 경고 */}
+              {salary / grandTotal > 0.45 && (
+                <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-700 font-semibold">
+                  🔴 인건비 비율 {((salary / grandTotal) * 100).toFixed(1)}% — 권장 기준(40%) 초과
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

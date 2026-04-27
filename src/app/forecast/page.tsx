@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getMembers, getSchedules, currentMonth, Member, ScheduleEntry } from "../lib/store";
+import { getMembers, getSchedules, getCosts, getSettlements, currentMonth, Member, ScheduleEntry } from "../lib/store";
+
+const INS_RATE = 0.1065;
 
 function fmtW(n: number) {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
@@ -33,12 +35,16 @@ interface MemberForecast {
 }
 
 export default function ForecastPage() {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
+  const [members,     setMembers]     = useState<Member[]>([]);
+  const [schedules,   setSchedules]   = useState<ScheduleEntry[]>([]);
+  const [allCosts,    setAllCosts]    = useState<ReturnType<typeof getCosts>>([]);
+  const [settlements, setSettlements] = useState<ReturnType<typeof getSettlements>>([]);
 
   useEffect(() => {
     setMembers(getMembers());
     setSchedules(getSchedules());
+    setAllCosts(getCosts());
+    setSettlements(getSettlements());
   }, []);
 
   const now = new Date();
@@ -110,6 +116,31 @@ export default function ForecastPage() {
 
   const progressPct = Math.round((daysElapsed / daysInMonth) * 100);
 
+  // ── 순현금흐름 예측 ─────────────────────────────────────────────────────
+  // 이번달 비용을 다음달 예상 지출로 사용 (기준값)
+  const thisCosts = useMemo(() => {
+    const c = allCosts.find((c) => c.month === month && (c.branch ?? "") === "");
+    if (!c) return null;
+    // 급여: 정산 완료분 우선
+    const monthSettled = settlements.filter((s) => s.month === month && s.settled);
+    const settledSalary = monthSettled.reduce((s, r) => s + r.companyCost, 0);
+    const manualSalary  = c.trainerSalary * (1 + INS_RATE) + c.freelanceSalary;
+    const salaryEst     = settledSalary > 0 ? settledSalary : manualSalary;
+    const fixedOther    = c.rent + (c.managementFee ?? 0) + c.utilities + c.communication + c.depreciation + c.otherFixed;
+    const variable      = c.supplies + c.marketing + (c.parkingFee ?? 0) + (c.paymentFee ?? 0) + c.otherVariable;
+    return {
+      salary: salaryEst, fixedOther, variable,
+      total: salaryEst + fixedOther + variable,
+      rent: c.rent, managementFee: c.managementFee ?? 0,
+    };
+  }, [allCosts, settlements, month]);
+
+  // 수입 = 소진 매출 + 재등록 잠재
+  const nextMonthIncome    = totalExpected + renewalPotential;
+  const nextMonthCost      = thisCosts?.total ?? 0;
+  const netCashflow        = nextMonthIncome - nextMonthCost;
+  const cashflowRate       = nextMonthIncome > 0 ? (netCashflow / nextMonthIncome) * 100 : 0;
+
   return (
     <div className="min-h-screen bg-zinc-50">
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
@@ -162,6 +193,109 @@ export default function ForecastPage() {
                 {willRunOutList.map((f) => f.member.name).join(", ")}
               </p>
             </div>
+          )}
+        </div>
+
+        {/* ── 순현금흐름 예측 ── */}
+        <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wide">📊 {nextMonthLabel()} 순현금흐름 예측</p>
+
+          {/* 수입 vs 지출 */}
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-zinc-500">예상 수입</span>
+              <span className="font-bold text-emerald-600">{fmtW(nextMonthIncome)}</span>
+            </div>
+            <div className="pl-3 space-y-1 text-xs text-zinc-400">
+              <div className="flex justify-between">
+                <span>└ 수업 소진 매출</span><span>{fmtW(totalExpected)}</span>
+              </div>
+              {renewalPotential > 0 && (
+                <div className="flex justify-between">
+                  <span>└ 재등록 잠재 매출</span><span>{fmtW(renewalPotential)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center border-t border-zinc-50 pt-2">
+              <span className="text-zinc-500">예상 지출</span>
+              <span className="font-bold text-red-500">
+                {thisCosts ? `− ${fmtW(nextMonthCost)}` : "비용 관리 입력 필요"}
+              </span>
+            </div>
+            {thisCosts && (
+              <div className="pl-3 space-y-1 text-xs text-zinc-400">
+                {thisCosts.salary > 0 && (
+                  <div className="flex justify-between"><span>└ 인건비</span><span>{fmtW(thisCosts.salary)}</span></div>
+                )}
+                {thisCosts.rent > 0 && (
+                  <div className="flex justify-between"><span>└ 임대료·관리비</span><span>{fmtW(thisCosts.rent + thisCosts.managementFee)}</span></div>
+                )}
+                {thisCosts.fixedOther - thisCosts.rent - thisCosts.managementFee > 0 && (
+                  <div className="flex justify-between"><span>└ 기타 고정비</span><span>{fmtW(thisCosts.fixedOther - thisCosts.rent - thisCosts.managementFee)}</span></div>
+                )}
+                {thisCosts.variable > 0 && (
+                  <div className="flex justify-between"><span>└ 변동비</span><span>{fmtW(thisCosts.variable)}</span></div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 순현금흐름 결과 */}
+          <div className={`rounded-2xl p-4 ${netCashflow >= 0 ? "bg-emerald-50" : "bg-red-50"}`}>
+            <div className="flex justify-between items-center">
+              <p className={`text-sm font-bold ${netCashflow >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                예상 순현금흐름
+              </p>
+              <p className={`text-2xl font-black ${netCashflow >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {netCashflow >= 0 ? "+" : ""}{fmtW(netCashflow)}
+              </p>
+            </div>
+            {nextMonthIncome > 0 && (
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className={netCashflow >= 0 ? "text-emerald-600" : "text-red-600"}>
+                    순이익률 {cashflowRate.toFixed(1)}%
+                  </span>
+                  <span className="text-zinc-400">
+                    {nextMonthCost > 0 ? `지출 비율 ${(100 - cashflowRate).toFixed(1)}%` : ""}
+                  </span>
+                </div>
+                {/* 시각적 바 */}
+                <div className="w-full bg-zinc-100 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className={`h-2.5 rounded-full transition-all ${netCashflow >= 0 ? "bg-emerald-500" : "bg-red-400"}`}
+                    style={{ width: `${Math.min(Math.max(cashflowRate, 0), 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 시나리오: 재등록 없는 경우 */}
+          {renewalPotential > 0 && (
+            <div className="bg-zinc-50 rounded-xl p-3 text-xs text-zinc-500 space-y-1">
+              <p className="font-semibold text-zinc-600">📌 시나리오 비교</p>
+              <div className="flex justify-between">
+                <span>재등록 없을 경우 순익</span>
+                <span className={`font-bold ${totalExpected - nextMonthCost >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                  {fmtW(totalExpected - nextMonthCost)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>재등록 모두 성사 시 순익</span>
+                <span className={`font-bold ${netCashflow >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                  {fmtW(netCashflow)}
+                </span>
+              </div>
+              <p className="text-zinc-400">* 재등록 잠재 매출: 이탈위험 회원 {atRiskList.length}명 × 직전 패키지 기준</p>
+            </div>
+          )}
+
+          {!thisCosts && (
+            <p className="text-xs text-zinc-400 bg-zinc-50 rounded-lg p-3">
+              💡 비용 관리에서 이번달 지출을 입력하면 순현금흐름이 자동 계산됩니다
+            </p>
           )}
         </div>
 

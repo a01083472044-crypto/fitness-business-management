@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   getMembers, getCosts, getSchedules, getTrainers, getBranches,
+  getSettlements, getReceivables, getTaxInvoices,
   emptyCosts, currentMonth,
   Member, ScheduleEntry, MonthlyCosts, Trainer,
 } from "../lib/store";
@@ -97,13 +98,15 @@ function calcTrainerProfit(trainer: Trainer, schedules: ScheduleEntry[], members
 export default function ReportPage() {
   const { staffTerm } = useStaffTerm();
   const months = useMemo(() => getLast6Months(), []);
-  const [members, setMembers]   = useState<Member[]>([]);
-  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
-  const [allCosts, setAllCosts] = useState<MonthlyCosts[]>([]);
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
-  const [branches, setBranches] = useState<string[]>([]);
+  const [members,     setMembers]     = useState<Member[]>([]);
+  const [schedules,   setSchedules]   = useState<ScheduleEntry[]>([]);
+  const [allCosts,    setAllCosts]    = useState<MonthlyCosts[]>([]);
+  const [trainers,    setTrainers]    = useState<Trainer[]>([]);
+  const [branches,    setBranches]    = useState<string[]>([]);
   const [selectedBranch, setSelectedBranch] = useState("");
-  const [focusMonth, setFocusMonth] = useState(currentMonth());
+  const [focusMonth,  setFocusMonth]  = useState(currentMonth());
+  // 월말 체크리스트 수동 항목
+  const [manualChecks, setManualChecks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const tr = getTrainers();
@@ -114,7 +117,20 @@ export default function ReportPage() {
     const saved = getBranches();
     const trBranches = tr.map((t) => t.branch).filter(Boolean);
     setBranches(Array.from(new Set([...saved, ...trBranches])));
+    // 수동 체크 복원
+    try {
+      const raw = localStorage.getItem("checklist_manual");
+      if (raw) setManualChecks(JSON.parse(raw));
+    } catch {}
   }, []);
+
+  function toggleManual(key: string) {
+    setManualChecks((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("checklist_manual", JSON.stringify(next));
+      return next;
+    });
+  }
 
   // 월별 데이터 집계
   const monthlyData = useMemo(() => {
@@ -175,6 +191,123 @@ export default function ReportPage() {
           <h1 className="text-2xl font-black text-zinc-900">월별 경영 리포트</h1>
           <p className="text-sm text-zinc-500 mt-0.5">6개월 매출 · 비용 · 순이익 추이</p>
         </div>
+
+        {/* ── 월말 마감 체크리스트 ── */}
+        {(() => {
+          const cm = currentMonth();
+          const allTrainers = trainers.filter((t) => t.status === "재직");
+          const settlements = getSettlements();
+          const invoices    = getTaxInvoices();
+          const receivables = getReceivables();
+
+          // 급여 정산
+          const settledTrainers = settlements.filter((s) => s.month === cm && s.settled);
+          const salaryDone      = allTrainers.length > 0 && settledTrainers.length >= allTrainers.length;
+          const salaryLabel     = allTrainers.length > 0
+            ? `${settledTrainers.length}/${allTrainers.length}명 정산 완료`
+            : "트레이너 없음";
+
+          // 세금계산서
+          const invCount  = invoices.filter((inv) => inv.issueDate.startsWith(cm)).length;
+          const invDone   = invCount > 0;
+
+          // 미수금
+          const unpaidRcv = receivables.filter((r) => !r.paid);
+          const rcvDone   = unpaidRcv.length === 0;
+
+          // 원천징수 (다음달 10일 납부)
+          const wDone = manualChecks["원천징수"] ?? false;
+          // 4대보험 (다음달 10일 납부)
+          const insDone = manualChecks["4대보험"] ?? false;
+          // 부가세 (반기·분기 신고)
+          const vatDone = manualChecks["부가세"] ?? false;
+
+          const items = [
+            { key: "salary",  label: "급여 정산", sub: salaryLabel, done: salaryDone, auto: true,  link: "/settlement" },
+            { key: "rcv",     label: "미수금 처리", sub: unpaidRcv.length > 0 ? `미결제 ${unpaidRcv.length}건 남음` : "미수금 없음", done: rcvDone, auto: true, link: "/receivables" },
+            { key: "inv",     label: "세금계산서 발행", sub: invDone ? `이번달 ${invCount}건 발행` : "발행 내역 없음", done: invDone, auto: true, link: "/tax" },
+            { key: "원천징수", label: "원천징수세 납부", sub: `다음달 10일까지 (전월분)`, done: wDone, auto: false, link: null },
+            { key: "4대보험", label: "4대보험 납부",   sub: "다음달 10일까지 (당월분)", done: insDone, auto: false, link: null },
+            { key: "부가세",  label: "부가세 신고·납부", sub: "개인 반기 / 법인 분기 확인", done: vatDone, auto: false, link: "/tax" },
+          ];
+          const doneCount = items.filter((i) => i.done).length;
+
+          return (
+            <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="font-bold text-zinc-900">📋 월말 마감 체크리스트</p>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                  doneCount === items.length ? "bg-emerald-100 text-emerald-700"
+                  : doneCount >= 3 ? "bg-yellow-100 text-yellow-700"
+                  : "bg-zinc-100 text-zinc-500"
+                }`}>
+                  {doneCount}/{items.length} 완료
+                </span>
+              </div>
+
+              {/* 진행 바 */}
+              <div className="w-full bg-zinc-100 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    doneCount === items.length ? "bg-emerald-500" : "bg-blue-500"
+                  }`}
+                  style={{ width: `${(doneCount / items.length) * 100}%` }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <div key={item.key}
+                    className={`flex items-start gap-3 p-3 rounded-xl transition ${
+                      item.done ? "bg-emerald-50" : "bg-zinc-50"
+                    }`}>
+                    {/* 체크박스 (자동 감지는 비활성, 수동은 클릭 가능) */}
+                    <button
+                      onClick={() => { if (!item.auto) toggleManual(item.key); }}
+                      className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition mt-0.5 ${
+                        item.done
+                          ? "bg-emerald-500 border-emerald-500 text-white"
+                          : item.auto
+                          ? "border-zinc-200 bg-white cursor-default"
+                          : "border-zinc-300 bg-white hover:border-blue-400 cursor-pointer"
+                      }`}>
+                      {item.done && <span className="text-xs font-black">✓</span>}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className={`text-sm font-semibold ${item.done ? "text-emerald-700" : "text-zinc-700"}`}>
+                          {item.label}
+                        </p>
+                        {item.auto && (
+                          <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-semibold">자동</span>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-0.5 ${item.done ? "text-emerald-500" : "text-zinc-400"}`}>
+                        {item.sub}
+                      </p>
+                    </div>
+                    {!item.auto && !item.done && (
+                      <button onClick={() => toggleManual(item.key)}
+                        className="flex-shrink-0 text-xs bg-blue-50 text-blue-600 font-bold px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition">
+                        완료 처리
+                      </button>
+                    )}
+                    {!item.auto && item.done && (
+                      <button onClick={() => toggleManual(item.key)}
+                        className="flex-shrink-0 text-xs text-zinc-400 hover:text-zinc-600 px-2 transition">
+                        취소
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-zinc-400 text-center">
+                🔵 자동: 연동 데이터 기반 · ⬜ 수동: 클릭으로 완료 처리
+              </p>
+            </div>
+          );
+        })()}
 
         {/* 지점 탭 */}
         {branches.length > 0 && (
