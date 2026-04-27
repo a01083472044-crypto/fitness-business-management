@@ -27,3 +27,6 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* 아이폰 홈바 영역 대응 */
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }

@@ -73,7 +73,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </div>
-      {children}
+      {/* 모바일 하단 탭바 높이만큼 패딩 (md 이상에서는 불필요) */}
+      <div className="pb-16 md:pb-0">
+        {children}
+      </div>
     </>
   );
 }
