@@ -1237,10 +1237,10 @@ export default function TaxPage() {
               {/* 월별 주요 일정 */}
               <div className="space-y-3">
                 {Object.entries(grouped)
-                  .filter(([, evts]) => evts.some((e) => e.tag === "vat" || e.tag === "income" || e.tag === "etc"))
+                  .filter(([, evts]) => evts.length > 0)
                   .map(([monthKey, evts]) => {
                     const [y, m] = monthKey.split("-");
-                    const important = evts.filter((e) => e.tag === "vat" || e.tag === "income" || e.tag === "etc");
+                    const important = evts; // 원천징수·4대보험 포함 전체 표시
                     if (important.length === 0) return null;
                     const isNextYear = Number(y) > calYear;
                     return (
