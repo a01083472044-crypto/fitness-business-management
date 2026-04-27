@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import React from "react";
 import {
   getCosts, saveCosts, emptyCosts, currentMonth,
@@ -168,6 +168,202 @@ function PaymentFeeField({
   );
 }
 
+// ── 직선법 감가상각 계산기 ────────────────────────────────────────────────
+interface DepreAsset {
+  id: string;
+  name: string;
+  cost: number;      // 취득원가
+  salvage: number;   // 잔존가치
+  lifeYears: number; // 내용연수 (년)
+}
+
+const LIFE_PRESETS = [
+  { label: "3년 (전자기기)", value: 3 },
+  { label: "5년 (운동기구)", value: 5 },
+  { label: "8년 (냉난방기)", value: 8 },
+  { label: "10년 (인테리어)", value: 10 },
+  { label: "20년 (구조물)", value: 20 },
+];
+
+function newAsset(): DepreAsset {
+  return { id: crypto.randomUUID(), name: "", cost: 0, salvage: 0, lifeYears: 5 };
+}
+
+function monthlyDepr(a: DepreAsset): number {
+  if (!a.cost || !a.lifeYears) return 0;
+  return Math.round((a.cost - a.salvage) / a.lifeYears / 12);
+}
+
+function DeprCalcField({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const [open,   setOpen]   = useState(false);
+  const [assets, setAssets] = useState<DepreAsset[]>([newAsset()]);
+
+  const totalMonthly = useMemo(
+    () => assets.reduce((s, a) => s + monthlyDepr(a), 0),
+    [assets]
+  );
+
+  function updateAsset(id: string, patch: Partial<DepreAsset>) {
+    setAssets((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  }
+  function removeAsset(id: string) {
+    setAssets((prev) => prev.filter((a) => a.id !== id));
+  }
+  function applyTotal() {
+    onChange(totalMonthly);
+    setOpen(false);
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* 감가상각비 직접 입력 필드 */}
+      <NumField
+        label="감가상각비 (월)"
+        value={value}
+        onChange={onChange}
+        hint="아래 직선법 계산기로 자동 산출할 수 있습니다"
+      />
+
+      {/* 계산기 토글 버튼 */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl py-2 transition"
+      >
+        🧮 직선법 감가상각 계산기 {open ? "▲" : "▼"}
+      </button>
+
+      {/* 계산기 패널 */}
+      {open && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-4">
+          <p className="text-xs font-black text-indigo-700">
+            📐 직선법: 월 감가상각비 = (취득원가 − 잔존가치) ÷ 내용연수(년) ÷ 12
+          </p>
+
+          {/* 자산 목록 */}
+          <div className="space-y-3">
+            {assets.map((a, idx) => {
+              const monthly = monthlyDepr(a);
+              return (
+                <div key={a.id} className="bg-white rounded-xl p-3 space-y-2 border border-indigo-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-zinc-500">자산 {idx + 1}</span>
+                    {assets.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeAsset(a.id)}
+                        className="text-xs text-red-400 hover:text-red-600 font-bold"
+                      >
+                        × 삭제
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 자산명 */}
+                  <input
+                    type="text"
+                    placeholder="자산명 (예: 런닝머신, 인테리어)"
+                    value={a.name}
+                    onChange={(e) => updateAsset(a.id, { name: e.target.value })}
+                    className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                  />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* 취득원가 */}
+                    <div>
+                      <label className="text-[10px] font-bold text-zinc-400 mb-0.5 block">취득원가</label>
+                      <input
+                        type="text"
+                        placeholder="예: 1500만"
+                        defaultValue={a.cost > 0 ? String(a.cost) : ""}
+                        onBlur={(e) => updateAsset(a.id, { cost: parseKorean(e.target.value) })}
+                        key={`cost-${a.id}`}
+                        className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                    {/* 잔존가치 */}
+                    <div>
+                      <label className="text-[10px] font-bold text-zinc-400 mb-0.5 block">잔존가치 (보통 0)</label>
+                      <input
+                        type="text"
+                        placeholder="0"
+                        defaultValue={a.salvage > 0 ? String(a.salvage) : ""}
+                        onBlur={(e) => updateAsset(a.id, { salvage: parseKorean(e.target.value) })}
+                        key={`salvage-${a.id}`}
+                        className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 내용연수 */}
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 mb-1 block">내용연수</label>
+                    <div className="flex gap-1 flex-wrap">
+                      {LIFE_PRESETS.map((p) => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => updateAsset(a.id, { lifeYears: p.value })}
+                          className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition ${
+                            a.lifeYears === p.value
+                              ? "bg-indigo-600 text-white border-indigo-600"
+                              : "bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300"
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 결과 */}
+                  {monthly > 0 && (
+                    <div className="bg-indigo-50 rounded-lg px-3 py-2 flex justify-between items-center">
+                      <span className="text-xs text-indigo-600">월 감가상각비</span>
+                      <span className="font-black text-indigo-700 text-sm">{formatKRW(monthly)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 자산 추가 버튼 */}
+          <button
+            type="button"
+            onClick={() => setAssets((prev) => [...prev, newAsset()])}
+            className="w-full text-xs font-bold text-indigo-500 bg-white border border-indigo-200 rounded-xl py-2 hover:bg-indigo-50 transition"
+          >
+            + 자산 추가
+          </button>
+
+          {/* 합계 + 적용 */}
+          <div className="bg-indigo-600 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-indigo-200 text-xs font-semibold">전체 월 감가상각비 합계</p>
+              <p className="text-white font-black text-xl">{formatKRW(totalMonthly)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={applyTotal}
+              disabled={totalMonthly === 0}
+              className="bg-white text-indigo-700 font-black text-sm px-4 py-2 rounded-xl hover:bg-indigo-50 transition disabled:opacity-40"
+            >
+              📌 적용
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── 메인 페이지 ───────────────────────────────────────────────────────────
 export default function CostsPage() {
   const [month,          setMonth]          = useState(currentMonth());
@@ -304,7 +500,7 @@ export default function CostsPage() {
           />
           <NumField label="공과금"          value={costs.utilities}          onChange={(v) => update("utilities", v)} />
           <NumField label="통신비"          value={costs.communication}      onChange={(v) => update("communication", v)} />
-          <NumField label="감가상각비 (월)" value={costs.depreciation}       onChange={(v) => update("depreciation", v)} />
+          <DeprCalcField value={costs.depreciation} onChange={(v) => update("depreciation", v)} />
           <NumField label="기타 고정비"     value={costs.otherFixed}         onChange={(v) => update("otherFixed", v)} />
           <div className="rounded-xl bg-zinc-50 px-4 py-3 flex justify-between text-sm border border-zinc-100">
             <span className="text-zinc-500 font-medium">고정비 합계 (4대보험 포함)</span>
