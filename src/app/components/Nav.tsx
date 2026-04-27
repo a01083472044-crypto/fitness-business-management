@@ -10,8 +10,13 @@ import { useStaffTerm } from "../context/StaffTermContext";
 const PINNED = [
   { href: "/dashboard", label: "🏠 대시보드" },
   { href: "/members",   label: "👤 회원관리" },
-  { href: "/schedule",  label: "📅 스케줄"   },
   { href: "/costs",     label: "💸 비용"     },
+];
+
+// 스케줄 드롭다운 (데스크톱 고정 영역에 배치)
+const SCHEDULE_ITEMS = [
+  { href: "/schedule",       label: "👤 1:1 스케줄"  },
+  { href: "/group-schedule", label: "👥 그룹 스케줄" },
 ];
 
 // ── 데스크톱: 드롭다운 그룹 ─────────────────────────────────────────────
@@ -61,12 +66,11 @@ const DESKTOP_GROUPS = [
   },
 ];
 
-// ── 모바일: 하단 탭 (4개 고정) ────────────────────────────────────────────
+// ── 모바일: 하단 탭 (4개 고정 — 스케줄은 팝업 처리) ─────────────────────
 const BOTTOM_TABS = [
-  { href: "/dashboard", icon: "🏠", label: "홈"    },
-  { href: "/members",   icon: "👤", label: "회원"  },
-  { href: "/schedule",  icon: "📅", label: "스케줄" },
-  { href: "/costs",     icon: "💸", label: "비용"  },
+  { href: "/dashboard", icon: "🏠", label: "홈"   },
+  { href: "/members",   icon: "👤", label: "회원" },
+  { href: "/costs",     icon: "💸", label: "비용" },
 ];
 
 // ── 모바일: 더보기 드로어 그룹 ───────────────────────────────────────────
@@ -184,10 +188,14 @@ export default function Nav() {
   const pathname      = usePathname();
   const { isAdmin }   = useAuth();
   const { staffTerm } = useStaffTerm();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
-  // 페이지 이동 시 드로어 자동 닫기
-  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+  // 페이지 이동 시 드로어·팝업 자동 닫기
+  useEffect(() => {
+    setDrawerOpen(false);
+    setScheduleOpen(false);
+  }, [pathname]);
 
   // staffTerm 반영 — 데스크톱 드롭다운 그룹
   const desktopGroups = DESKTOP_GROUPS.map((g) => ({
@@ -218,8 +226,11 @@ export default function Nav() {
     ? [...drawerGroups, { title: "⚙️ 관리자", items: [{ href: "/admin", label: "계정관리" }] }]
     : drawerGroups;
 
-  // 현재 경로가 하단 탭에 있는지
-  const inBottomTab = BOTTOM_TABS.some((t) => t.href === pathname);
+  // 현재 경로가 하단 탭(스케줄 포함)에 있는지
+  const inBottomTab =
+    BOTTOM_TABS.some((t) => t.href === pathname) ||
+    pathname === "/schedule" ||
+    pathname === "/group-schedule";
 
   return (
     <>
@@ -227,7 +238,7 @@ export default function Nav() {
       <nav className="hidden md:block bg-white border-b border-zinc-100 sticky top-0 z-40">
         <div className="px-4 flex items-center gap-1 h-12">
 
-          {/* 핵심 4개 고정 링크 */}
+          {/* 핵심 고정 링크 */}
           {PINNED.map(({ href, label }) => (
             <Link
               key={href}
@@ -241,6 +252,13 @@ export default function Nav() {
               {label}
             </Link>
           ))}
+
+          {/* 스케줄 드롭다운 (1:1 / 그룹 선택) */}
+          <Dropdown
+            label="📅 스케줄"
+            items={SCHEDULE_ITEMS}
+            hasActive={pathname === "/schedule" || pathname === "/group-schedule"}
+          />
 
           {/* 구분선 */}
           <div className="w-px h-5 bg-zinc-200 mx-1" />
@@ -278,11 +296,67 @@ export default function Nav() {
               </Link>
             );
           })}
+
+          {/* 스케줄 탭 — 팝업 */}
+          <div className="relative">
+            <button
+              onClick={() => setScheduleOpen((v) => !v)}
+              className={`w-full h-16 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
+                pathname === "/schedule" || pathname === "/group-schedule"
+                  ? "text-blue-600"
+                  : "text-zinc-400"
+              }`}
+            >
+              <span className="text-xl leading-none">📅</span>
+              스케줄
+            </button>
+
+            {/* 팝업 */}
+            {scheduleOpen && (
+              <>
+                {/* 바깥 탭 닫기 */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setScheduleOpen(false)}
+                />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden w-36">
+                  <p className="text-[10px] font-black text-zinc-400 text-center pt-2 pb-1 px-3 uppercase tracking-wider">
+                    스케줄 선택
+                  </p>
+                  <Link
+                    href="/schedule"
+                    onClick={() => setScheduleOpen(false)}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition ${
+                      pathname === "/schedule"
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-zinc-600 hover:bg-zinc-50"
+                    }`}
+                  >
+                    👤 1:1 스케줄
+                  </Link>
+                  <Link
+                    href="/group-schedule"
+                    onClick={() => setScheduleOpen(false)}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition border-t border-zinc-50 ${
+                      pathname === "/group-schedule"
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-zinc-600 hover:bg-zinc-50"
+                    }`}
+                  >
+                    👥 그룹 스케줄
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* 더보기 */}
           <button
             onClick={() => setDrawerOpen(true)}
             className={`flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-              !inBottomTab ? "text-blue-600" : "text-zinc-400"
+              !inBottomTab && pathname !== "/schedule" && pathname !== "/group-schedule"
+                ? "text-blue-600"
+                : "text-zinc-400"
             }`}
           >
             <span className="text-xl leading-none">☰</span>
