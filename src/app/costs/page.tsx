@@ -274,31 +274,63 @@ function DeprCalcField({
                     className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
                   />
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* 취득원가 */}
-                    <div>
-                      <label className="text-[10px] font-bold text-zinc-400 mb-0.5 block">취득원가</label>
-                      <input
-                        type="text"
-                        placeholder="예: 1500만"
-                        defaultValue={a.cost > 0 ? String(a.cost) : ""}
-                        onBlur={(e) => updateAsset(a.id, { cost: parseKorean(e.target.value) })}
-                        key={`cost-${a.id}`}
-                        className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
-                      />
+                  {/* 취득원가 */}
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 mb-0.5 block">취득원가</label>
+                    <input
+                      type="text"
+                      placeholder="예: 1500만"
+                      defaultValue={a.cost > 0 ? String(a.cost) : ""}
+                      onBlur={(e) => updateAsset(a.id, { cost: parseKorean(e.target.value) })}
+                      key={`cost-${a.id}`}
+                      className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                  </div>
+
+                  {/* 잔존가치 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-zinc-400">잔존가치</label>
+                      <span className="text-[10px] text-indigo-500 font-semibold">
+                        💡 통상 취득원가의 5~10%
+                      </span>
                     </div>
-                    {/* 잔존가치 */}
-                    <div>
-                      <label className="text-[10px] font-bold text-zinc-400 mb-0.5 block">잔존가치 (보통 0)</label>
-                      <input
-                        type="text"
-                        placeholder="0"
-                        defaultValue={a.salvage > 0 ? String(a.salvage) : ""}
-                        onBlur={(e) => updateAsset(a.id, { salvage: parseKorean(e.target.value) })}
-                        key={`salvage-${a.id}`}
-                        className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
-                      />
+                    <input
+                      type="text"
+                      placeholder="0원 (없음)"
+                      defaultValue={a.salvage > 0 ? String(a.salvage) : ""}
+                      onBlur={(e) => updateAsset(a.id, { salvage: parseKorean(e.target.value) })}
+                      key={`salvage-${a.id}`}
+                      className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                    />
+                    {/* 빠른 설정 버튼 */}
+                    <div className="flex gap-1.5">
+                      {[
+                        { label: "없음 (0%)", rate: 0 },
+                        { label: `5% ${a.cost > 0 ? "= " + Math.round(a.cost * 0.05).toLocaleString() + "원" : ""}`, rate: 0.05 },
+                        { label: `10% ${a.cost > 0 ? "= " + Math.round(a.cost * 0.10).toLocaleString() + "원" : ""}`, rate: 0.10 },
+                      ].map(({ label, rate }) => {
+                        const sv = Math.round(a.cost * rate);
+                        const active = a.salvage === sv && (rate === 0 ? a.salvage === 0 : true);
+                        return (
+                          <button
+                            key={rate}
+                            type="button"
+                            onClick={() => updateAsset(a.id, { salvage: sv })}
+                            className={`flex-1 text-[10px] font-bold px-1.5 py-1 rounded-lg border transition text-center leading-tight ${
+                              active
+                                ? "bg-indigo-600 text-white border-indigo-600"
+                                : "bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
+                    <p className="text-[10px] text-zinc-400 leading-snug">
+                      세법상 잔존가치는 0원이 일반적이나, 실제 처분가치를 고려해 5~10%로 설정하기도 합니다.
+                    </p>
                   </div>
 
                   {/* 내용연수 */}
