@@ -85,7 +85,7 @@ function NumField({
           ref={inputRef}
           type="text"
           inputMode="text"
-          placeholder="0  또는  150만"
+          placeholder="0  또는  150만원"
           value={raw}
           onChange={handleChange}
           onFocus={(e) => { setFocused(true); e.target.select(); }}   // 포커스 시 전체 선택
@@ -272,7 +272,7 @@ function DeprCalcField({
                     <label className="text-[10px] font-bold text-zinc-400 mb-0.5 block">취득원가</label>
                     <input
                       type="text"
-                      placeholder="예: 1500만"
+                      placeholder="예: 1500만원"
                       defaultValue={a.cost > 0 ? String(a.cost) : ""}
                       onBlur={(e) => updateAsset(a.id, { cost: parseKorean(e.target.value) })}
                       key={`cost-${a.id}`}
