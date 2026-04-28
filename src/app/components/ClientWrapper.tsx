@@ -78,23 +78,21 @@ function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
 
-      {/* 카카오톡 문의 플로팅 버튼 */}
+      {/* 카카오톡 문의 플로팅 버튼 (아이콘 전용) */}
       <a
         href="http://pf.kakao.com/_WxbPCX"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2 rounded-full shadow-lg px-4 py-2.5 text-sm font-bold transition hover:scale-105 active:scale-95"
-        style={{ backgroundColor: "#FEE500", color: "#3A1D1D" }}
+        title="카카오톡 문의하기"
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition hover:scale-110 active:scale-95"
+        style={{ backgroundColor: "#FEE500" }}
       >
-        {/* 카카오톡 말풍선 아이콘 */}
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <ellipse cx="10" cy="9" rx="8.5" ry="7.5" fill="#3A1D1D"/>
-          <path d="M5 15.5c.3-1.2.7-2.3.9-3C3.5 11.3 2 10 2 8.5 2 5.46 5.58 3 10 3s8 2.46 8 5.5-3.58 5.5-8 5.5c-.55 0-1.09-.04-1.6-.12L5 15.5z" fill="#FEE500"/>
-          <circle cx="7" cy="9" r="1" fill="#3A1D1D"/>
-          <circle cx="10" cy="9" r="1" fill="#3A1D1D"/>
-          <circle cx="13" cy="9" r="1" fill="#3A1D1D"/>
+        <svg width="26" height="26" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2C5.58 2 2 5.02 2 8.75c0 2.4 1.52 4.5 3.82 5.7-.15.55-.55 2-.63 2.3-.1.37.14.37.29.27.12-.08 1.9-1.28 2.67-1.8.6.08 1.22.13 1.85.13 4.42 0 8-3.02 8-6.75C18 5.02 14.42 2 10 2z" fill="#3A1D1D"/>
+          <circle cx="7" cy="8.75" r="1" fill="#FEE500"/>
+          <circle cx="10" cy="8.75" r="1" fill="#FEE500"/>
+          <circle cx="13" cy="8.75" r="1" fill="#FEE500"/>
         </svg>
-        문의하기
       </a>
     </>
   );
