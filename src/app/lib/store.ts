@@ -171,12 +171,34 @@ export interface TrainerSettlement {
   memo: string;
 }
 
+// ── 상담 관리 ──────────────────────────────────────────────────────────────
+export type ConsultationStatus = "예약" | "완료-등록" | "완료-미등록" | "재상담" | "취소";
+export type ConsultationSource = "인스타그램" | "네이버" | "지인소개" | "현장방문" | "카카오" | "기타";
+export type ConsultationInterest = "PT" | "헬스(일반)" | "그룹수업" | "체형교정" | "다이어트" | "기타";
+
+export interface Consultation {
+  id: string;
+  name: string;                    // 상담자 이름
+  phone: string;                   // 연락처
+  date: string;                    // 상담 날짜 YYYY-MM-DD
+  time: string;                    // 상담 시간 HH:MM
+  counselor: string;               // 담당 트레이너/직원
+  branch: string;                  // 지점
+  source: ConsultationSource | ""; // 유입 경로
+  interest: ConsultationInterest | ""; // 관심 서비스
+  status: ConsultationStatus;      // 상담 결과
+  followUpDate: string;            // 재상담 예정일 YYYY-MM-DD
+  note: string;                    // 메모
+  createdAt: string;               // 생성일시
+}
+
 // ── 스토리지 키 ────────────────────────────────────────────────────────────
-const SCHEDULE_KEY    = "gym_schedule";
-const MEMBERS_KEY     = "gym_members";
-const COSTS_KEY       = "gym_costs";
-const PREFILL_KEY     = "calc_prefill";
-const TRAINERS_KEY    = "gym_trainers";
+const SCHEDULE_KEY       = "gym_schedule";
+const MEMBERS_KEY        = "gym_members";
+const COSTS_KEY          = "gym_costs";
+const PREFILL_KEY        = "calc_prefill";
+const TRAINERS_KEY       = "gym_trainers";
+const CONSULTATIONS_KEY  = "gym_consultations";
 const SETTLEMENT_KEY  = "gym_settlements";
 const BRANCHES_KEY    = "gym_branches";
 
@@ -275,6 +297,16 @@ export function getSettlements(): TrainerSettlement[] {
 export function saveSettlements(settlements: TrainerSettlement[]) {
   localStorage.setItem(SETTLEMENT_KEY, JSON.stringify(settlements));
   pushToCloud("settlements", settlements);
+}
+
+export function getConsultations(): Consultation[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(CONSULTATIONS_KEY) || "[]"); } catch { return []; }
+}
+
+export function saveConsultations(list: Consultation[]) {
+  localStorage.setItem(CONSULTATIONS_KEY, JSON.stringify(list));
+  pushToCloud("consultations", list);
 }
 
 // ── 유틸 ───────────────────────────────────────────────────────────────────

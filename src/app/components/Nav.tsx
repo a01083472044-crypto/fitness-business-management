@@ -24,8 +24,9 @@ const DESKTOP_GROUPS = [
   {
     label: "운영",
     items: [
-      { href: "/trainers",       label: "트레이너 관리"  },
-      { href: "/sessions",       label: "수업 관리"     },
+      { href: "/trainers",      label: "트레이너 관리"  },
+      { href: "/sessions",      label: "수업 관리"     },
+      { href: "/consultation",  label: "🗣️ 상담 관리"  },
       { href: "/group-schedule", label: "👥 그룹 스케줄" },
     ],
   },
@@ -81,6 +82,7 @@ const DRAWER_GROUPS = [
     items: [
       { href: "/trainers",       label: "트레이너 관리"  },
       { href: "/sessions",       label: "수업 관리"     },
+      { href: "/consultation",   label: "🗣️ 상담 관리"  },
       { href: "/group-schedule", label: "👥 그룹 스케줄" },
     ],
   },

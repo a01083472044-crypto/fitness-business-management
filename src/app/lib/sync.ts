@@ -10,14 +10,15 @@ import { getGymCode } from "./gymCode";
 
 // ── collection → localStorage 키 매핑 ──────────────────────────────────────
 const KEY_MAP: Record<string, string> = {
-  members:     "gym_members",
-  trainers:    "gym_trainers",
-  costs:       "gym_costs",
-  schedules:   "gym_schedule",
-  settlements: "gym_settlements",
-  receivables: "gym_receivables",
-  taxInvoices: "gym_tax_invoices",
-  branches:    "gym_branches",
+  members:       "gym_members",
+  trainers:      "gym_trainers",
+  costs:         "gym_costs",
+  schedules:     "gym_schedule",
+  settlements:   "gym_settlements",
+  receivables:   "gym_receivables",
+  taxInvoices:   "gym_tax_invoices",
+  branches:      "gym_branches",
+  consultations: "gym_consultations",
 };
 
 export type SyncCollection = keyof typeof KEY_MAP;
