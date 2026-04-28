@@ -368,7 +368,7 @@ export default function DashboardPage() {
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">📋 기타 비용</p>
           <div className="bg-white rounded-2xl border border-zinc-100 p-4 divide-y divide-zinc-50">
             {costs.rent > 0                       && <Row label="임대료"      value={fmtW(costs.rent)} />}
-            {(costs.managementFee ?? 0) > 0       && <Row label="관리비"      value={fmtW(costs.managementFee ?? 0)} />}
+            <Row label="관리비" value={(costs.managementFee ?? 0) > 0 ? fmtW(costs.managementFee ?? 0) : "미입력"} />
             {costs.utilities > 0                  && <Row label="공과금"      value={fmtW(costs.utilities)} />}
             {costs.communication > 0              && <Row label="통신비"      value={fmtW(costs.communication)} />}
             {costs.depreciation > 0               && <Row label="감가상각"    value={fmtW(costs.depreciation)} />}
