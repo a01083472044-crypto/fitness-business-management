@@ -96,16 +96,6 @@ export default function DocumentsPage() {
           </div>
         )}
 
-        {/* Supabase 버킷 설정 안내 (관리자만) */}
-        {isAdmin && supabase && docs.length === 0 && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
-            <p className="font-bold text-sm">📦 처음 사용 전 버킷 생성 필요</p>
-            <p>1. <strong>Supabase 대시보드</strong> → <strong>Storage</strong> 메뉴 접속</p>
-            <p>2. <strong>New bucket</strong> 클릭 → 이름: <code className="bg-blue-100 px-1 rounded font-mono">gym-documents</code></p>
-            <p>3. <strong>Public bucket</strong> 체크 → 저장</p>
-            <p className="text-blue-500">완료 후 파일 추가 버튼을 눌러 업로드하세요.</p>
-          </div>
-        )}
 
         {/* 알림 메시지 */}
         {msg && (
