@@ -177,13 +177,6 @@ interface DepreAsset {
   lifeYears: number; // 내용연수 (년)
 }
 
-const LIFE_PRESETS = [
-  { label: "3년 (전자기기)", value: 3 },
-  { label: "5년 (운동기구)", value: 5 },
-  { label: "8년 (냉난방기)", value: 8 },
-  { label: "10년 (인테리어)", value: 10 },
-  { label: "20년 (구조물)", value: 20 },
-];
 
 function newAsset(): DepreAsset {
   return { id: crypto.randomUUID(), name: "", cost: 0, salvage: 0, lifeYears: 5 };
@@ -288,36 +281,60 @@ function DeprCalcField({
                   </div>
 
                   {/* 잔존가치 */}
-                  <div>
-                    <label className="text-[10px] font-bold text-zinc-400 mb-0.5 block">잔존가치 (세법상 0원)</label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-zinc-400">잔존가치</label>
+                      <span className="text-[10px] text-indigo-500 font-semibold">💡 통상 취득원가의 5~10%</span>
+                    </div>
                     <input
                       type="text"
-                      placeholder="0"
+                      placeholder="0원 (없음)"
                       defaultValue={a.salvage > 0 ? String(a.salvage) : ""}
                       onBlur={(e) => updateAsset(a.id, { salvage: parseKorean(e.target.value) })}
                       key={`salvage-${a.id}`}
                       className="w-full rounded-lg border border-zinc-200 px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
                     />
+                    <div className="flex gap-1.5">
+                      {[
+                        { label: "없음 (0%)", rate: 0 },
+                        { label: `5%${a.cost > 0 ? " = " + Math.round(a.cost * 0.05).toLocaleString() + "원" : ""}`, rate: 0.05 },
+                        { label: `10%${a.cost > 0 ? " = " + Math.round(a.cost * 0.10).toLocaleString() + "원" : ""}`, rate: 0.10 },
+                      ].map(({ label, rate }) => {
+                        const sv = Math.round(a.cost * rate);
+                        const active = a.salvage === sv;
+                        return (
+                          <button
+                            key={rate}
+                            type="button"
+                            onClick={() => updateAsset(a.id, { salvage: sv })}
+                            className={`flex-1 text-[10px] font-bold px-1.5 py-1 rounded-lg border transition text-center leading-tight ${
+                              active
+                                ? "bg-indigo-600 text-white border-indigo-600"
+                                : "bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300 hover:text-indigo-600"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* 내용연수 */}
+                  {/* 내용연수 — 숫자 직접 입력 */}
                   <div>
-                    <label className="text-[10px] font-bold text-zinc-400 mb-1 block">내용연수</label>
-                    <div className="flex gap-1 flex-wrap">
-                      {LIFE_PRESETS.map((p) => (
-                        <button
-                          key={p.value}
-                          type="button"
-                          onClick={() => updateAsset(a.id, { lifeYears: p.value })}
-                          className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition ${
-                            a.lifeYears === p.value
-                              ? "bg-indigo-600 text-white border-indigo-600"
-                              : "bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300"
-                          }`}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
+                    <label className="text-[10px] font-bold text-zinc-400 mb-1 block">
+                      내용연수 <span className="text-zinc-300 font-normal">(피트니스 기구·인테리어 통상 5년)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={a.lifeYears}
+                        onChange={(e) => updateAsset(a.id, { lifeYears: Math.max(1, Number(e.target.value)) })}
+                        className="w-24 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-center focus:outline-none focus:border-indigo-400"
+                      />
+                      <span className="text-sm text-zinc-400 font-medium">년</span>
                     </div>
                   </div>
 
