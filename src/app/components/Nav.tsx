@@ -58,10 +58,11 @@ const DESKTOP_GROUPS = [
   {
     label: "세무·기타",
     items: [
-      { href: "/tax",      label: "🧾 세무 도우미" },
-      { href: "/",         label: "🧮 계산기"      },
-      { href: "/sync",     label: "📱 동기화"      },
-      { href: "/settings", label: "🏷️ 설정"        },
+      { href: "/tax",       label: "🧾 세무 도우미" },
+      { href: "/",          label: "🧮 계산기"      },
+      { href: "/documents", label: "📂 문서 자료실" },
+      { href: "/sync",      label: "📱 동기화"      },
+      { href: "/settings",  label: "🏷️ 설정"        },
     ],
   },
 ];
@@ -112,10 +113,11 @@ const DRAWER_GROUPS = [
   {
     title: "🧾 세무·기타",
     items: [
-      { href: "/tax",      label: "🧾 세무 도우미" },
-      { href: "/",         label: "🧮 계산기"      },
-      { href: "/sync",     label: "📱 동기화"      },
-      { href: "/settings", label: "🏷️ 설정"        },
+      { href: "/tax",       label: "🧾 세무 도우미" },
+      { href: "/",          label: "🧮 계산기"      },
+      { href: "/documents", label: "📂 문서 자료실" },
+      { href: "/sync",      label: "📱 동기화"      },
+      { href: "/settings",  label: "🏷️ 설정"        },
     ],
   },
 ];
