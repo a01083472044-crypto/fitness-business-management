@@ -396,7 +396,7 @@ export default function TaxPage() {
       "━━━━━━━━━━━━━━━━━━━",
       ...thisM.map((inv) => `· ${inv.issueDate} | ${inv.buyerName} | ${inv.invoiceType} | ${fmtW(inv.total)}`),
       "━━━━━━━━━━━━━━━━━━━",
-      "📱 피트니스 경영 관리 시스템",
+      "📱 FitBoss",
     ];
     const result = await shareKakao(lines.join("\n"), "세금계산서 발행 현황");
     if (result === "copied") showInvToast("📋 복사됐습니다. 카카오톡에 붙여넣기 하세요.");
@@ -1089,7 +1089,7 @@ export default function TaxPage() {
             const lines = [
               "BEGIN:VCALENDAR",
               "VERSION:2.0",
-              "PRODID:-//피트니스 경영 관리 시스템//KO",
+              "PRODID:-//FitBoss//KO",
               "CALSCALE:GREGORIAN",
               "METHOD:PUBLISH",
               "X-WR-CALNAME:세금 신고 일정",
@@ -1131,7 +1131,7 @@ export default function TaxPage() {
               "━━━━━━━━━━━━━━━━━━━━━",
               "📌 매월 10일: 원천징수세 납부 · 4대보험 납부",
               "━━━━━━━━━━━━━━━━━━━━━",
-              "📱 피트니스 경영 관리 시스템",
+              "📱 FitBoss",
             ];
             const text = lines.join("\n");
             const appKey = KakaoStore.getAppKey();

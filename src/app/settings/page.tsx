@@ -126,7 +126,7 @@ export default function SettingsPage() {
         `📆 연동일: ${linkedAt || today}\n` +
         `🕐 전송 시각: ${new Date().toLocaleTimeString("ko-KR")}\n\n` +
         `이 메시지가 수신됐다면 자동 전송이 정상 작동합니다!\n` +
-        `📱 피트니스 경영 관리 시스템`
+        `📱 FitBoss`
       );
       showMsg("✅ 테스트 메시지가 카카오톡으로 전송됐습니다!");
     } catch (e) {

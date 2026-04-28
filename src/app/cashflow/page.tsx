@@ -47,7 +47,7 @@ export default function CashflowPage() {
       `📅 ${todayStr()} 자금일보`,
       "━━━━━━━━━━━━━━━━━━━",
       `💳 신규 등록: 앱에서 확인`,
-      "📱 피트니스 경영 관리 시스템",
+      "📱 FitBoss",
     ];
     return lines.join("\n");
   }, []);
@@ -197,7 +197,7 @@ export default function CashflowPage() {
       lines.push(`⚠️ 미수금: ${unpaidRcvs.length}건 / ${fmtW(unpaidTotal)}`);
     }
     lines.push("━━━━━━━━━━━━━━━━━━━");
-    lines.push("📱 피트니스 경영 관리 시스템");
+    lines.push("📱 FitBoss");
     return lines.join("\n");
   }
 

@@ -110,7 +110,7 @@ export default function PaymentPage() {
         return `${M_LABEL[m]}: ${fmtW(d.amount)} (${d.count}건 · ${pct}%)${d.fee > 0 ? ` | 수수료 −${fmtW(d.fee)}` : ""}`;
       }),
       "━━━━━━━━━━━━━━━━━━━━━",
-      "📱 피트니스 경영 관리 시스템",
+      "📱 FitBoss",
     ].filter(Boolean);
 
     const text = lines.join("\n");

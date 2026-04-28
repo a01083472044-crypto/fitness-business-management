@@ -86,7 +86,7 @@ export default function ReceivablesPage() {
       ...unpaid.map((r) => `· ${r.memberName} | ${fmtW(r.amount)} | 기한: ${r.dueDate}${r.dueDate < todayStr() ? " 🔴연체" : ""}`),
       autoCount > 0 ? `\n🔍 자동 감지: ${autoCount}건 추가 확인 필요` : "",
       "━━━━━━━━━━━━━━━━━━━",
-      "📱 피트니스 경영 관리 시스템",
+      "📱 FitBoss",
     ].filter(Boolean);
     const result = await shareKakao(lines.join("\n"), "미수금 현황");
     if (result === "copied") showToast("📋 복사됐습니다. 카카오톡에 붙여넣기 하세요.");

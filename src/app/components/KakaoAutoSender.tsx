@@ -71,7 +71,7 @@ function buildDailyReport(): string {
     monthCost > 0 ? `   예상 순익: ${fmtW(monthIncome - monthCost)}` : "",
     unpaid.length > 0 ? `⚠️ 미수금: ${unpaid.length}건 / ${fmtW(unpaid.reduce((s, r) => s + r.amount, 0))}` : "✅ 미수금 없음",
     "━━━━━━━━━━━━━━━━━━━━━",
-    "📱 피트니스 경영 관리 시스템",
+    "📱 FitBoss",
   ].filter(Boolean);
 
   return lines.join("\n");
