@@ -85,7 +85,7 @@ function NumField({
           ref={inputRef}
           type="text"
           inputMode="text"
-          placeholder="0  또는  150만원"
+          placeholder="0  또는  만원"
           value={raw}
           onChange={handleChange}
           onFocus={(e) => { setFocused(true); e.target.select(); }}   // 포커스 시 전체 선택
