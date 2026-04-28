@@ -56,10 +56,13 @@ export default function ConsultationPage() {
     setBranches(getBranches());
   }, []);
 
-  // 지점이 선택되면 해당 지점 + 지점 미지정 트레이너, 전체면 전부 표시
-  const branchTrainers = form.branch
-    ? allTrainers.filter((t) => t.branch === form.branch || !t.branch)
-    : allTrainers;
+  // 지점 선택 시: 해당 지점 트레이너 우선 표시.
+  // 트레이너에 지점이 설정되지 않은 경우(미설정 gym) → 전체 트레이너 표시(fallback)
+  const branchTrainers = (() => {
+    if (!form.branch) return allTrainers;
+    const matched = allTrainers.filter((t) => t.branch === form.branch);
+    return matched.length > 0 ? matched : allTrainers;
+  })();
 
   const reload = useCallback(() => setList(getConsultations()), []);
 
@@ -117,8 +120,9 @@ export default function ConsultationPage() {
 
   // 지점 변경 시 해당 지점에 없는 상담자면 초기화
   const handleBranchChange = (branch: string) => {
+    const matched = branch ? allTrainers.filter((t) => t.branch === branch) : [];
     const available = branch
-      ? allTrainers.filter((t) => t.branch === branch || !t.branch).map((t) => t.name)
+      ? (matched.length > 0 ? matched : allTrainers).map((t) => t.name)
       : allTrainers.map((t) => t.name);
     setForm((p) => ({
       ...p,
