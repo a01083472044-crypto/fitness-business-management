@@ -77,6 +77,25 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <div className="pb-16 md:pb-0">
         {children}
       </div>
+
+      {/* 카카오톡 문의 플로팅 버튼 */}
+      <a
+        href="http://pf.kakao.com/_WxbPCX"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2 rounded-full shadow-lg px-4 py-2.5 text-sm font-bold transition hover:scale-105 active:scale-95"
+        style={{ backgroundColor: "#FEE500", color: "#3A1D1D" }}
+      >
+        {/* 카카오톡 말풍선 아이콘 */}
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <ellipse cx="10" cy="9" rx="8.5" ry="7.5" fill="#3A1D1D"/>
+          <path d="M5 15.5c.3-1.2.7-2.3.9-3C3.5 11.3 2 10 2 8.5 2 5.46 5.58 3 10 3s8 2.46 8 5.5-3.58 5.5-8 5.5c-.55 0-1.09-.04-1.6-.12L5 15.5z" fill="#FEE500"/>
+          <circle cx="7" cy="9" r="1" fill="#3A1D1D"/>
+          <circle cx="10" cy="9" r="1" fill="#3A1D1D"/>
+          <circle cx="13" cy="9" r="1" fill="#3A1D1D"/>
+        </svg>
+        문의하기
+      </a>
     </>
   );
 }
