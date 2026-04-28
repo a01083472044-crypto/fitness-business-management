@@ -117,12 +117,17 @@ export interface CalcPrefill {
   totalSessions: number;
   conductedSessions: number;
   rent: number;
+  managementFee: number;
   trainerSalary: number;
   freelanceSalary: number;
+  utilities: number;
+  communication: number;
   depreciation: number;
   otherFixed: number;
   supplies: number;
   marketing: number;
+  parkingFee: number;
+  paymentFee: number;
   otherVariable: number;
   isVat: boolean;
 }

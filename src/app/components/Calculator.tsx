@@ -5,8 +5,8 @@ import * as XLSX from "xlsx";
 import { getPrefill, clearPrefill } from "../lib/store";
 
 interface Step1 { totalPayment: string; totalSessions: string; conductedSessions: string; }
-interface Step2 { rent: string; trainerSalary: string; freelanceSalary: string; equipmentCost: string; usefulLife: string; otherFixed: string; }
-interface Step3 { isVat: boolean; supplies: string; marketing: string; otherVariable: string; }
+interface Step2 { rent: string; managementFee: string; trainerSalary: string; freelanceSalary: string; utilities: string; communication: string; equipmentCost: string; usefulLife: string; otherFixed: string; }
+interface Step3 { isVat: boolean; supplies: string; marketing: string; parkingFee: string; paymentFee: string; otherVariable: string; }
 
 interface Results {
   actualRevenue: number; unpaidLiability: number; vat: number;
@@ -63,8 +63,8 @@ function calculate(s1: Step1, s2: Step2, s3: Step3): Results {
   const equipmentCost = parseKorean(s2.equipmentCost);
   const usefulLife = parseKorean(s2.usefulLife);
   const depreciation = usefulLife > 0 ? equipmentCost / (usefulLife * 12) : 0;
-  const totalFixed = parseKorean(s2.rent) + trainerSalary + insurance + freelanceSalary + freelanceTax + depreciation + parseKorean(s2.otherFixed);
-  const totalVariable = parseKorean(s3.supplies) + parseKorean(s3.marketing) + parseKorean(s3.otherVariable);
+  const totalFixed = parseKorean(s2.rent) + parseKorean(s2.managementFee) + trainerSalary + insurance + freelanceSalary + freelanceTax + parseKorean(s2.utilities) + parseKorean(s2.communication) + depreciation + parseKorean(s2.otherFixed);
+  const totalVariable = parseKorean(s3.supplies) + parseKorean(s3.marketing) + parseKorean(s3.parkingFee) + parseKorean(s3.paymentFee) + parseKorean(s3.otherVariable);
   const netProfit = actualRevenue - totalTax - totalFixed - totalVariable;
   return { actualRevenue, unpaidLiability, vat, incomeTaxReserve, totalTax, insurance, freelanceTax, depreciation, totalFixed, totalVariable, netProfit, totalPayment };
 }
@@ -97,8 +97,8 @@ interface ImportedMonth { label: string; row: unknown[]; }
 
 export default function Calculator() {
   const [s1, setS1] = useState<Step1>({ totalPayment: "", totalSessions: "", conductedSessions: "" });
-  const [s2, setS2] = useState<Step2>({ rent: "", trainerSalary: "", freelanceSalary: "", equipmentCost: "", usefulLife: "", otherFixed: "" });
-  const [s3, setS3] = useState<Step3>({ isVat: false, supplies: "", marketing: "", otherVariable: "" });
+  const [s2, setS2] = useState<Step2>({ rent: "", managementFee: "", trainerSalary: "", freelanceSalary: "", utilities: "", communication: "", equipmentCost: "", usefulLife: "", otherFixed: "" });
+  const [s3, setS3] = useState<Step3>({ isVat: false, supplies: "", marketing: "", parkingFee: "", paymentFee: "", otherVariable: "" });
   const [result, setResult] = useState<Results | null>(null);
   const [importedMonths, setImportedMonths] = useState<ImportedMonth[]>([]);
   const [memberSessions, setMemberSessions] = useState({ total: 0, conducted: 0 });
@@ -111,8 +111,8 @@ export default function Calculator() {
     if (!prefill) return;
     clearPrefill();
     setS1({ totalPayment: String(prefill.totalPayment), totalSessions: String(prefill.totalSessions), conductedSessions: String(prefill.conductedSessions) });
-    setS2({ rent: String(prefill.rent), trainerSalary: String(prefill.trainerSalary), freelanceSalary: String(prefill.freelanceSalary), equipmentCost: prefill.depreciation > 0 ? String(prefill.depreciation * 12) : "", usefulLife: prefill.depreciation > 0 ? "1" : "", otherFixed: String(prefill.otherFixed) });
-    setS3({ isVat: prefill.isVat, supplies: String(prefill.supplies), marketing: String(prefill.marketing), otherVariable: String(prefill.otherVariable) });
+    setS2({ rent: String(prefill.rent), managementFee: String(prefill.managementFee ?? 0), trainerSalary: String(prefill.trainerSalary), freelanceSalary: String(prefill.freelanceSalary), utilities: String(prefill.utilities ?? 0), communication: String(prefill.communication ?? 0), equipmentCost: prefill.depreciation > 0 ? String(prefill.depreciation * 12) : "", usefulLife: prefill.depreciation > 0 ? "1" : "", otherFixed: String(prefill.otherFixed) });
+    setS3({ isVat: prefill.isVat, supplies: String(prefill.supplies), marketing: String(prefill.marketing), parkingFee: String(prefill.parkingFee ?? 0), paymentFee: String(prefill.paymentFee ?? 0), otherVariable: String(prefill.otherVariable) });
     setImportMsg("대시보드에서 데이터를 불러왔습니다.");
     setResult(null);
   }, []);
@@ -122,8 +122,8 @@ export default function Calculator() {
   const reset = () => {
     setResult(null);
     setS1({ totalPayment: "", totalSessions: "", conductedSessions: "" });
-    setS2({ rent: "", trainerSalary: "", freelanceSalary: "", equipmentCost: "", usefulLife: "", otherFixed: "" });
-    setS3({ isVat: false, supplies: "", marketing: "", otherVariable: "" });
+    setS2({ rent: "", managementFee: "", trainerSalary: "", freelanceSalary: "", utilities: "", communication: "", equipmentCost: "", usefulLife: "", otherFixed: "" });
+    setS3({ isVat: false, supplies: "", marketing: "", parkingFee: "", paymentFee: "", otherVariable: "" });
     setImportMsg(null);
   };
 
@@ -131,8 +131,8 @@ export default function Calculator() {
     const n = (v: unknown) => (typeof v === "number" ? v : 0);
     setS1({ totalPayment: String(n(row[1])), totalSessions: String(sessions.total || 0), conductedSessions: String(sessions.conducted || 0) });
     const depreciation = n(row[12]);
-    setS2({ rent: String(n(row[7])), trainerSalary: String(n(row[8])), freelanceSalary: "", equipmentCost: depreciation > 0 ? String(depreciation * 12) : "", usefulLife: depreciation > 0 ? "1" : "", otherFixed: String(n(row[10]) + n(row[11]) + n(row[13])) });
-    setS3({ isVat, supplies: String(n(row[15])), marketing: String(n(row[16])), otherVariable: String(n(row[17]) + n(row[18]) + n(row[19]) + n(row[20])) });
+    setS2({ rent: String(n(row[7])), managementFee: "", trainerSalary: String(n(row[8])), freelanceSalary: "", utilities: String(n(row[10])), communication: String(n(row[11])), equipmentCost: depreciation > 0 ? String(depreciation * 12) : "", usefulLife: depreciation > 0 ? "1" : "", otherFixed: String(n(row[13])) });
+    setS3({ isVat, supplies: String(n(row[15])), marketing: String(n(row[16])), parkingFee: "", paymentFee: "", otherVariable: String(n(row[17]) + n(row[18]) + n(row[19]) + n(row[20])) });
     setShowMonthPicker(false);
     setResult(null);
   };
@@ -208,6 +208,7 @@ export default function Calculator() {
         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">🏢 고정비</p>
         <div className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
           <NumInput label="임차료 (월세)" value={s2.rent} onChange={(v) => setS2({ ...s2, rent: v })} />
+          <NumInput label="관리비" value={s2.managementFee} onChange={(v) => setS2({ ...s2, managementFee: v })} />
           <NumInput label="정규직 인건비 합계" value={s2.trainerSalary} onChange={(v) => setS2({ ...s2, trainerSalary: v })} hint="4대보험+산재(10.65%)는 자동 계산됩니다" />
           <NumInput label="프리랜서 인건비 합계" value={s2.freelanceSalary} onChange={(v) => setS2({ ...s2, freelanceSalary: v })} hint="원천징수(3.3%)는 자동 계산됩니다" />
 
@@ -248,7 +249,9 @@ export default function Calculator() {
             )}
           </div>
 
-          <NumInput label="기타 고정비" value={s2.otherFixed} onChange={(v) => setS2({ ...s2, otherFixed: v })} hint="공과금, 통신비 등" />
+          <NumInput label="공과금" value={s2.utilities} onChange={(v) => setS2({ ...s2, utilities: v })} />
+          <NumInput label="통신비" value={s2.communication} onChange={(v) => setS2({ ...s2, communication: v })} />
+          <NumInput label="기타 고정비" value={s2.otherFixed} onChange={(v) => setS2({ ...s2, otherFixed: v })} />
         </div>
       </section>
 
@@ -271,6 +274,8 @@ export default function Calculator() {
           </div>
           <NumInput label="소모품비" value={s3.supplies} onChange={(v) => setS3({ ...s3, supplies: v })} />
           <NumInput label="마케팅 / 광고비" value={s3.marketing} onChange={(v) => setS3({ ...s3, marketing: v })} />
+          <NumInput label="주차비" value={s3.parkingFee} onChange={(v) => setS3({ ...s3, parkingFee: v })} />
+          <NumInput label="결제 수수료" value={s3.paymentFee} onChange={(v) => setS3({ ...s3, paymentFee: v })} />
           <NumInput label="기타 변동비" value={s3.otherVariable} onChange={(v) => setS3({ ...s3, otherVariable: v })} />
         </div>
       </section>
