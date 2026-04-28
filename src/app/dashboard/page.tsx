@@ -367,16 +367,17 @@ export default function DashboardPage() {
         <section className="space-y-2">
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">📋 기타 비용</p>
           <div className="bg-white rounded-2xl border border-zinc-100 p-4 divide-y divide-zinc-50">
-            {costs.rent > 0        && <Row label="임대료"        value={fmtW(costs.rent)} />}
-            {(costs.managementFee ?? 0) > 0 && <Row label="관리비" value={fmtW(costs.managementFee ?? 0)} />}
-            {(costs.utilities + costs.communication) > 0 && (
-              <Row label="공과금·통신비" value={fmtW(costs.utilities + costs.communication)} />
-            )}
-            {costs.depreciation > 0 && <Row label="감가상각" value={fmtW(costs.depreciation)} />}
-            {costs.otherFixed > 0   && <Row label="기타 고정비" value={fmtW(costs.otherFixed)} />}
-            {(costs.supplies + costs.marketing + costs.otherVariable) > 0 && (
-              <Row label="변동비 합계" value={fmtW(costs.supplies + costs.marketing + costs.otherVariable)} />
-            )}
+            {costs.rent > 0                       && <Row label="임대료"      value={fmtW(costs.rent)} />}
+            {(costs.managementFee ?? 0) > 0       && <Row label="관리비"      value={fmtW(costs.managementFee ?? 0)} />}
+            {costs.utilities > 0                  && <Row label="공과금"      value={fmtW(costs.utilities)} />}
+            {costs.communication > 0              && <Row label="통신비"      value={fmtW(costs.communication)} />}
+            {costs.depreciation > 0               && <Row label="감가상각"    value={fmtW(costs.depreciation)} />}
+            {costs.otherFixed > 0                 && <Row label="기타 고정비" value={fmtW(costs.otherFixed)} />}
+            {costs.supplies > 0                   && <Row label="소모품비"    value={fmtW(costs.supplies)} />}
+            {costs.marketing > 0                  && <Row label="마케팅/광고비" value={fmtW(costs.marketing)} />}
+            {(costs.parkingFee ?? 0) > 0          && <Row label="주차비"      value={fmtW(costs.parkingFee ?? 0)} />}
+            {(costs.paymentFee ?? 0) > 0          && <Row label="결제 수수료" value={fmtW(costs.paymentFee ?? 0)} />}
+            {costs.otherVariable > 0              && <Row label="기타 변동비" value={fmtW(costs.otherVariable)} />}
             {otherFixed + totalVariable === 0 && (
               <p className="text-xs text-zinc-400 text-center py-2">비용 관리에서 입력하면 자동 반영됩니다</p>
             )}
