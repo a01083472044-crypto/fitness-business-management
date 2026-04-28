@@ -192,16 +192,6 @@ export default function Calculator() {
         </div>
       )}
 
-      {/* 엑셀 불러오기 */}
-      <div>
-        <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleExcelFile(f); e.target.value = ""; }} />
-        <button onClick={() => fileRef.current?.click()}
-          className="w-full rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 py-3 text-sm font-semibold text-blue-600 hover:bg-blue-100 transition flex items-center justify-center gap-2">
-          📂 피트니스 정산 시트 엑셀에서 불러오기
-        </button>
-        {importMsg && <p className="mt-2 text-xs text-center text-blue-500">{importMsg}</p>}
-      </div>
 
       {/* ── 1. 매출 정보 ── */}
       <section className="space-y-3">
