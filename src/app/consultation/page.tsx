@@ -56,9 +56,9 @@ export default function ConsultationPage() {
     setBranches(getBranches());
   }, []);
 
-  // 지점이 선택되면 해당 지점 트레이너만, 전체면 전부 표시
+  // 지점이 선택되면 해당 지점 + 지점 미지정 트레이너, 전체면 전부 표시
   const branchTrainers = form.branch
-    ? allTrainers.filter((t) => t.branch === form.branch)
+    ? allTrainers.filter((t) => t.branch === form.branch || !t.branch)
     : allTrainers;
 
   const reload = useCallback(() => setList(getConsultations()), []);
@@ -118,7 +118,7 @@ export default function ConsultationPage() {
   // 지점 변경 시 해당 지점에 없는 상담자면 초기화
   const handleBranchChange = (branch: string) => {
     const available = branch
-      ? allTrainers.filter((t) => t.branch === branch).map((t) => t.name)
+      ? allTrainers.filter((t) => t.branch === branch || !t.branch).map((t) => t.name)
       : allTrainers.map((t) => t.name);
     setForm((p) => ({
       ...p,
