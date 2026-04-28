@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   getConsultations, saveConsultations, getTrainers, getBranches,
-  Consultation, ConsultationStatus, ConsultationSource, ConsultationInterest,
+  Consultation, ConsultationStatus, ConsultationSource, ConsultationInterest, Trainer,
 } from "../lib/store";
 
 // ── 상수 ──────────────────────────────────────────────────────────────────
@@ -47,14 +47,19 @@ export default function ConsultationPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<Consultation | null>(null);
   const [form, setForm]         = useState(emptyForm());
-  const [trainers, setTrainers] = useState<string[]>([]);
+  const [allTrainers, setAllTrainers] = useState<Trainer[]>([]);
   const [branches, setBranches] = useState<string[]>([]);
 
   useEffect(() => {
     setList(getConsultations());
-    setTrainers(getTrainers().filter((t) => t.status === "재직").map((t) => t.name));
+    setAllTrainers(getTrainers().filter((t) => t.status === "재직"));
     setBranches(getBranches());
   }, []);
+
+  // 지점이 선택되면 해당 지점 트레이너만, 전체면 전부 표시
+  const branchTrainers = form.branch
+    ? allTrainers.filter((t) => t.branch === form.branch)
+    : allTrainers;
 
   const reload = useCallback(() => setList(getConsultations()), []);
 
@@ -109,6 +114,18 @@ export default function ConsultationPage() {
   const closeForm = () => { setShowForm(false); setEditing(null); setForm(emptyForm()); };
 
   const f = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  // 지점 변경 시 해당 지점에 없는 상담자면 초기화
+  const handleBranchChange = (branch: string) => {
+    const available = branch
+      ? allTrainers.filter((t) => t.branch === branch).map((t) => t.name)
+      : allTrainers.map((t) => t.name);
+    setForm((p) => ({
+      ...p,
+      branch,
+      counselor: available.includes(p.counselor) ? p.counselor : "",
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -169,7 +186,7 @@ export default function ConsultationPage() {
         <div className="space-y-2">
           <input
             type="text"
-            placeholder="이름, 연락처, 담당자 검색..."
+            placeholder="이름, 연락처, 상담자 검색..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={inputCls}
@@ -289,21 +306,21 @@ export default function ConsultationPage() {
                 </div>
               </div>
 
-              {/* 담당자 + 지점 */}
+              {/* 지점 + 상담자 (지점 먼저 선택 → 해당 지점 상담자 필터링) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>담당자</label>
-                  <select value={form.counselor} onChange={(e) => f("counselor", e.target.value)} className={inputCls}>
-                    <option value="">선택</option>
-                    {trainers.map((t) => <option key={t} value={t}>{t}</option>)}
-                    <option value="직접입력">직접입력</option>
+                  <label className={labelCls}>지점</label>
+                  <select value={form.branch} onChange={(e) => handleBranchChange(e.target.value)} className={inputCls}>
+                    <option value="">전체</option>
+                    {branches.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>지점</label>
-                  <select value={form.branch} onChange={(e) => f("branch", e.target.value)} className={inputCls}>
-                    <option value="">전체</option>
-                    {branches.map((b) => <option key={b} value={b}>{b}</option>)}
+                  <label className={labelCls}>상담자</label>
+                  <select value={form.counselor} onChange={(e) => f("counselor", e.target.value)} className={inputCls}>
+                    <option value="">선택</option>
+                    {branchTrainers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+                    <option value="직접입력">직접입력</option>
                   </select>
                 </div>
               </div>
