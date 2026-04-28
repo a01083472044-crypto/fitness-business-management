@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   getConsultations, saveConsultations, getTrainers, getBranches,
   Consultation, ConsultationStatus, ConsultationSource, ConsultationInterest, Trainer,
@@ -56,13 +56,12 @@ export default function ConsultationPage() {
     setBranches(getBranches());
   }, []);
 
-  // 지점 선택 시: 해당 지점 트레이너 우선 표시.
-  // 트레이너에 지점이 설정되지 않은 경우(미설정 gym) → 전체 트레이너 표시(fallback)
-  const branchTrainers = (() => {
+  // 지점 선택 시 해당 지점 트레이너만, 없으면 전체 표시
+  const branchTrainers = useMemo(() => {
     if (!form.branch) return allTrainers;
     const matched = allTrainers.filter((t) => t.branch === form.branch);
     return matched.length > 0 ? matched : allTrainers;
-  })();
+  }, [form.branch, allTrainers]);
 
   const reload = useCallback(() => setList(getConsultations()), []);
 
@@ -118,16 +117,14 @@ export default function ConsultationPage() {
 
   const f = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
-  // 지점 변경 시 해당 지점에 없는 상담자면 초기화
+  // 지점 변경 — 상담자 목록도 함께 갱신
   const handleBranchChange = (branch: string) => {
-    const matched = branch ? allTrainers.filter((t) => t.branch === branch) : [];
-    const available = branch
-      ? (matched.length > 0 ? matched : allTrainers).map((t) => t.name)
-      : allTrainers.map((t) => t.name);
+    const matched = branch ? allTrainers.filter((t) => t.branch === branch) : allTrainers;
+    const options = (matched.length > 0 ? matched : allTrainers).map((t) => t.name);
     setForm((p) => ({
       ...p,
       branch,
-      counselor: available.includes(p.counselor) ? p.counselor : "",
+      counselor: options.includes(p.counselor) ? p.counselor : "",
     }));
   };
 
