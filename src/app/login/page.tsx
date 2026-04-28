@@ -49,10 +49,11 @@ export default function LoginPage() {
         {/* 로고 영역 */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-3xl">🏋️</span>
+            <span className="text-3xl">💪</span>
           </div>
-          <h1 className="text-2xl font-black text-zinc-900">FitBoss</h1>
-          <p className="text-sm text-zinc-500 mt-1">지점 계정으로 로그인하세요</p>
+          <h1 className="text-3xl font-black text-zinc-900 tracking-tight">FitBoss</h1>
+          <p className="text-xs font-semibold text-blue-500 mt-1">피트니스 경영 관리 플랫폼</p>
+          <p className="text-sm text-zinc-400 mt-2">지점 계정으로 로그인하세요</p>
         </div>
 
         {/* 로그인 폼 */}

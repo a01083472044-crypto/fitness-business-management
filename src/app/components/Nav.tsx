@@ -240,6 +240,13 @@ export default function Nav() {
       <nav className="hidden md:block bg-white border-b border-zinc-100 sticky top-0 z-40">
         <div className="px-4 flex items-center gap-1 h-12">
 
+          {/* 브랜드 로고 */}
+          <Link href="/dashboard" className="flex items-center gap-1.5 mr-2 flex-shrink-0">
+            <span className="text-lg">💪</span>
+            <span className="font-black text-zinc-900 text-base tracking-tight">FitBoss</span>
+          </Link>
+          <div className="w-px h-5 bg-zinc-200 mr-1" />
+
           {/* 핵심 고정 링크 */}
           {PINNED.map(({ href, label }) => (
             <Link
@@ -386,7 +393,10 @@ export default function Nav() {
           <div className="w-10 h-1 bg-zinc-200 rounded-full" />
         </div>
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-100">
-          <p className="font-black text-zinc-800 text-base">전체 메뉴</p>
+          <div className="flex items-center gap-1.5">
+            <span className="text-lg">💪</span>
+            <p className="font-black text-zinc-900 text-base tracking-tight">FitBoss</p>
+          </div>
           <button
             onClick={() => setDrawerOpen(false)}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 transition"
