@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   getConsultations, saveConsultations, getTrainers, getBranches,
   Consultation, ConsultationStatus, ConsultationSource, ConsultationInterest, Trainer,
@@ -48,19 +48,28 @@ export default function ConsultationPage() {
   const [editing, setEditing]   = useState<Consultation | null>(null);
   const [form, setForm]         = useState(emptyForm());
   const [allTrainers, setAllTrainers] = useState<Trainer[]>([]);
+  const [counselorNames, setCounselorNames] = useState<string[]>([]);
   const [branches, setBranches] = useState<string[]>([]);
 
+  // 초기 로드
   useEffect(() => {
     setList(getConsultations());
-    setAllTrainers(getTrainers().filter((t) => t.status === "재직"));
+    const active = getTrainers().filter((t) => t.status === "재직");
+    setAllTrainers(active);
+    setCounselorNames(active.map((t) => t.name));
     setBranches(getBranches());
   }, []);
 
-  // 지점 선택 시 해당 지점 트레이너만, 없으면 전체 표시
-  const branchTrainers = useMemo(() => {
-    if (!form.branch) return allTrainers;
+  // 지점 변경 시 상담자 목록 갱신
+  useEffect(() => {
+    if (allTrainers.length === 0) return;
+    if (!form.branch) {
+      setCounselorNames(allTrainers.map((t) => t.name));
+      return;
+    }
     const matched = allTrainers.filter((t) => t.branch === form.branch);
-    return matched.length > 0 ? matched : allTrainers;
+    // 지점 매칭 트레이너가 있으면 그것만, 없으면 전체 표시
+    setCounselorNames(matched.length > 0 ? matched.map((t) => t.name) : allTrainers.map((t) => t.name));
   }, [form.branch, allTrainers]);
 
   const reload = useCallback(() => setList(getConsultations()), []);
@@ -117,15 +126,9 @@ export default function ConsultationPage() {
 
   const f = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
-  // 지점 변경 — 상담자 목록도 함께 갱신
+  // 지점 변경 — form.branch만 업데이트 (상담자 목록은 useEffect가 갱신)
   const handleBranchChange = (branch: string) => {
-    const matched = branch ? allTrainers.filter((t) => t.branch === branch) : allTrainers;
-    const options = (matched.length > 0 ? matched : allTrainers).map((t) => t.name);
-    setForm((p) => ({
-      ...p,
-      branch,
-      counselor: options.includes(p.counselor) ? p.counselor : "",
-    }));
+    setForm((p) => ({ ...p, branch, counselor: "" }));
   };
 
   return (
@@ -320,7 +323,7 @@ export default function ConsultationPage() {
                   <label className={labelCls}>상담자</label>
                   <select value={form.counselor} onChange={(e) => f("counselor", e.target.value)} className={inputCls}>
                     <option value="">선택</option>
-                    {branchTrainers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+                    {counselorNames.map((name) => <option key={name} value={name}>{name}</option>)}
                     <option value="직접입력">직접입력</option>
                   </select>
                 </div>
