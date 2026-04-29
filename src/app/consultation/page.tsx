@@ -47,15 +47,22 @@ export default function ConsultationPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<Consultation | null>(null);
   const [form, setForm]         = useState(emptyForm());
-  const [counselorNames, setCounselorNames] = useState<string[]>([]);
+  const [allActiveTrainers, setAllActiveTrainers] = useState<{ name: string; branch: string }[]>([]);
   const [branches, setBranches] = useState<string[]>([]);
 
-  // 초기 로드 — 상담자는 전체 재직 직원
+  // 초기 로드
   useEffect(() => {
     setList(getConsultations());
-    setCounselorNames(getTrainers().filter((t) => t.status === "재직").map((t) => t.name));
+    setAllActiveTrainers(
+      getTrainers().filter((t) => t.status === "재직").map((t) => ({ name: t.name, branch: t.branch ?? "" }))
+    );
     setBranches(getBranches());
   }, []);
+
+  // 선택된 지점에 따라 상담자 목록 계산
+  const counselorNames = form.branch
+    ? allActiveTrainers.filter((t) => t.branch === form.branch).map((t) => t.name)
+    : allActiveTrainers.map((t) => t.name);
 
   const reload = useCallback(() => setList(getConsultations()), []);
 
@@ -110,6 +117,11 @@ export default function ConsultationPage() {
   const closeForm = () => { setShowForm(false); setEditing(null); setForm(emptyForm()); };
 
   const f = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  // 지점 변경 시 상담자 초기화
+  const handleBranchChange = (branch: string) => {
+    setForm((p) => ({ ...p, branch, counselor: "" }));
+  };
 
 
   return (
@@ -295,7 +307,7 @@ export default function ConsultationPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>지점</label>
-                  <select value={form.branch} onChange={(e) => f("branch", e.target.value)} className={inputCls}>
+                  <select value={form.branch} onChange={(e) => handleBranchChange(e.target.value)} className={inputCls}>
                     <option value="">전체</option>
                     {branches.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
