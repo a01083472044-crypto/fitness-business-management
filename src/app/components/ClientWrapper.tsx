@@ -7,10 +7,24 @@ import Nav from "./Nav";
 import KakaoAutoSender from "./KakaoAutoSender";
 import SyncBadge from "./SyncBadge";
 
+// 랜딩 페이지는 Auth 전체 우회 — AuthProvider 바깥에서 판단
+function LandingBypass({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  // "/" 는 AuthProvider/AppShell 없이 바로 렌더
+  if (pathname === "/") return <>{children}</>;
+  return (
+    <AuthProvider>
+      <StaffTermProvider>
+        <AppShell>{children}</AppShell>
+      </StaffTermProvider>
+    </AuthProvider>
+  );
+}
+
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname();
   const { profile, loading, isAdmin, activeBranch, signOut } = useAuth();
-  const isPublicPage = pathname === "/" || pathname === "/login" || pathname === "/signup";
+  const isPublicPage = pathname === "/login" || pathname === "/signup";
 
   // 로그인/회원가입 페이지는 Nav 없이
   if (isPublicPage) return <>{children}</>;
@@ -99,11 +113,5 @@ function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <StaffTermProvider>
-        <AppShell>{children}</AppShell>
-      </StaffTermProvider>
-    </AuthProvider>
-  );
+  return <LandingBypass>{children}</LandingBypass>;
 }
