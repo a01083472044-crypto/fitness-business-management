@@ -192,6 +192,17 @@ export interface Consultation {
   createdAt: string;               // 생성일시
 }
 
+// ── 락커 ───────────────────────────────────────────────────────────────────
+export interface Locker {
+  id: string;
+  number: number;      // 락커 번호
+  memberId: string;    // "" = 빈 락커
+  memberName: string;
+  startDate: string;   // YYYY-MM-DD
+  endDate: string;     // YYYY-MM-DD 만료일
+  note: string;
+}
+
 // ── 체크인 ─────────────────────────────────────────────────────────────────
 export interface CheckIn {
   id: string;
@@ -204,6 +215,7 @@ export interface CheckIn {
 }
 
 // ── 스토리지 키 ────────────────────────────────────────────────────────────
+const LOCKERS_KEY        = "gym_lockers";
 const CHECKINS_KEY       = "gym_checkins";
 const SCHEDULE_KEY       = "gym_schedule";
 const MEMBERS_KEY        = "gym_members";
@@ -380,6 +392,15 @@ export function getTaxInvoices(): TaxInvoice[] {
 export function saveTaxInvoices(list: TaxInvoice[]) {
   localStorage.setItem(TAX_INVOICES_KEY, JSON.stringify(list));
   pushToCloud("taxInvoices", list);
+}
+
+export function getLockers(): Locker[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(LOCKERS_KEY) || "[]"); } catch { return []; }
+}
+export function saveLockers(list: Locker[]) {
+  localStorage.setItem(LOCKERS_KEY, JSON.stringify(list));
+  pushToCloud("lockers", list);
 }
 
 export function getCheckIns(): CheckIn[] {
