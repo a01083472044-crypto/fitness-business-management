@@ -127,6 +127,13 @@ export default function LockerPage() {
     setEditTotal(false);
   };
 
+  const adjustTotal = (delta: number) => {
+    const n = Math.max(1, Math.min(500, total + delta));
+    localStorage.setItem("gym_locker_total", String(n));
+    setTotal(n);
+    setTotalInput(String(n));
+  };
+
   // 회원 검색 결과
   const filteredMembers = members.filter(
     (m) => m.name.includes(memberSearch) || m.phone.includes(memberSearch)
@@ -137,28 +144,53 @@ export default function LockerPage() {
       <div className="max-w-lg mx-auto px-4 py-8 space-y-5">
 
         {/* 헤더 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-zinc-900">🔒 락커 관리</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">배정 · 만료일 · 빈 락커 현황</p>
-          </div>
-          {/* 총 락커 수 */}
-          {editTotal ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="number" value={totalInput} min={1} max={500}
-                onChange={(e) => setTotalInput(e.target.value)}
-                className="w-20 rounded-xl border border-zinc-200 px-3 py-1.5 text-sm text-center focus:border-blue-500 focus:outline-none"
-              />
-              <button onClick={saveTotal}
-                className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-xl font-bold">확인</button>
+        <div>
+          <h1 className="text-2xl font-black text-zinc-900">🔒 락커 관리</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">배정 · 만료일 · 빈 락커 현황</p>
+        </div>
+
+        {/* 락커 개수 설정 */}
+        <div className="bg-white rounded-2xl border border-zinc-100 p-4">
+          <p className="text-xs font-bold text-zinc-500 mb-3">락커 총 개수 설정</p>
+          <div className="flex items-center gap-3">
+            {/* 빠른 감소 */}
+            <div className="flex gap-1">
+              <button onClick={() => adjustTotal(-10)}
+                className="px-2.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-bold hover:bg-zinc-200 transition">-10</button>
+              <button onClick={() => adjustTotal(-1)}
+                className="px-2.5 py-2 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-bold hover:bg-zinc-200 transition">-1</button>
             </div>
-          ) : (
-            <button onClick={() => setEditTotal(true)}
-              className="text-xs text-zinc-400 bg-zinc-100 px-3 py-1.5 rounded-xl hover:bg-zinc-200 transition">
-              총 {total}개 ✏️
-            </button>
-          )}
+
+            {/* 직접 입력 */}
+            {editTotal ? (
+              <div className="flex flex-1 items-center gap-2">
+                <input
+                  type="number" value={totalInput} min={1} max={500}
+                  onChange={(e) => setTotalInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && saveTotal()}
+                  autoFocus
+                  className="flex-1 rounded-xl border border-blue-400 px-3 py-2 text-sm text-center font-black focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <button onClick={saveTotal}
+                  className="px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition">
+                  확인
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setEditTotal(true)}
+                className="flex-1 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm font-black hover:bg-zinc-100 transition text-center">
+                {total}개
+              </button>
+            )}
+
+            {/* 빠른 증가 */}
+            <div className="flex gap-1">
+              <button onClick={() => adjustTotal(1)}
+                className="px-2.5 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition">+1</button>
+              <button onClick={() => adjustTotal(10)}
+                className="px-2.5 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition">+10</button>
+            </div>
+          </div>
         </div>
 
         {/* 통계 카드 */}
