@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   getConsultations, saveConsultations, getTrainers, getBranches,
-  Consultation, ConsultationStatus, ConsultationSource, ConsultationInterest, Trainer,
+  Consultation, ConsultationStatus, ConsultationSource, ConsultationInterest,
 } from "../lib/store";
 
 // ── 상수 ──────────────────────────────────────────────────────────────────
@@ -47,30 +47,15 @@ export default function ConsultationPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState<Consultation | null>(null);
   const [form, setForm]         = useState(emptyForm());
-  const [allTrainers, setAllTrainers] = useState<Trainer[]>([]);
   const [counselorNames, setCounselorNames] = useState<string[]>([]);
   const [branches, setBranches] = useState<string[]>([]);
 
-  // 초기 로드
+  // 초기 로드 — 상담자는 전체 재직 직원
   useEffect(() => {
     setList(getConsultations());
-    const active = getTrainers().filter((t) => t.status === "재직");
-    setAllTrainers(active);
-    setCounselorNames(active.map((t) => t.name));
+    setCounselorNames(getTrainers().filter((t) => t.status === "재직").map((t) => t.name));
     setBranches(getBranches());
   }, []);
-
-  // 지점 변경 시 상담자 목록 갱신
-  useEffect(() => {
-    if (allTrainers.length === 0) return;
-    if (!form.branch) {
-      setCounselorNames(allTrainers.map((t) => t.name));
-      return;
-    }
-    const matched = allTrainers.filter((t) => t.branch === form.branch);
-    // 지점 매칭 트레이너가 있으면 그것만, 없으면 전체 표시
-    setCounselorNames(matched.length > 0 ? matched.map((t) => t.name) : allTrainers.map((t) => t.name));
-  }, [form.branch, allTrainers]);
 
   const reload = useCallback(() => setList(getConsultations()), []);
 
@@ -126,10 +111,6 @@ export default function ConsultationPage() {
 
   const f = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
-  // 지점 변경 — form.branch만 업데이트 (상담자 목록은 useEffect가 갱신)
-  const handleBranchChange = (branch: string) => {
-    setForm((p) => ({ ...p, branch, counselor: "" }));
-  };
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -310,11 +291,11 @@ export default function ConsultationPage() {
                 </div>
               </div>
 
-              {/* 지점 + 상담자 (지점 먼저 선택 → 해당 지점 상담자 필터링) */}
+              {/* 지점 + 상담자 */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>지점</label>
-                  <select value={form.branch} onChange={(e) => handleBranchChange(e.target.value)} className={inputCls}>
+                  <select value={form.branch} onChange={(e) => f("branch", e.target.value)} className={inputCls}>
                     <option value="">전체</option>
                     {branches.map((b) => <option key={b} value={b}>{b}</option>)}
                   </select>
