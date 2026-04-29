@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useStaffTerm, STAFF_PRESETS } from "../context/StaffTermContext";
+import { getBranches, saveBranches } from "../lib/store";
 import {
   KakaoStore, kakaoLogin, kakaoLogout,
   silentRefreshToken, sendKakaoMemo, initKakao, syncSWSchedule,
@@ -21,6 +22,10 @@ export default function SettingsPage() {
   const [customInput, setCustomInput] = useState("");
   const [saved,       setSaved]       = useState(false);
 
+  // ── 지점 관리 ────────────────────────────────────────────────────────────
+  const [branches,    setBranches]    = useState<string[]>([]);
+  const [newBranch,   setNewBranch]   = useState("");
+
   // ── 카카오 상태 ──────────────────────────────────────────────────────────
   const [appKey,       setAppKey]       = useState("");
   const [appKeySaved,  setAppKeySaved]  = useState(false);
@@ -35,6 +40,7 @@ export default function SettingsPage() {
   const [showGuide,    setShowGuide]    = useState(false);
 
   useEffect(() => {
+    setBranches(getBranches());
     setAppKey(KakaoStore.getAppKey());
     setConnStatus(getConnStatus());
     setAutoEnabled(KakaoStore.isEnabled());
@@ -50,6 +56,23 @@ export default function SettingsPage() {
       });
     }
   }, []);
+
+  // ── 지점 추가/삭제 ───────────────────────────────────────────────────────
+  const handleAddBranch = () => {
+    const name = newBranch.trim();
+    if (!name) return;
+    if (branches.includes(name)) { alert("이미 있는 지점명입니다."); return; }
+    const updated = [...branches, name];
+    setBranches(updated);
+    saveBranches(updated);
+    setNewBranch("");
+  };
+  const handleDeleteBranch = (b: string) => {
+    if (!confirm(`"${b}" 지점을 삭제하시겠습니까?`)) return;
+    const updated = branches.filter((x) => x !== b);
+    setBranches(updated);
+    saveBranches(updated);
+  };
 
   // ── 직원 호칭 ────────────────────────────────────────────────────────────
   const isCustom    = !STAFF_PRESETS.slice(0, -1).some((p) => p.term === staffTerm);
@@ -423,6 +446,45 @@ export default function SettingsPage() {
               {kakaoMsg.text}
             </div>
           )}
+        </section>
+
+        {/* ══════════════════ 지점 관리 ══════════════════ */}
+        <section className="bg-white rounded-2xl border border-zinc-100 p-5 space-y-4">
+          <p className="font-bold text-zinc-900">🏢 지점 관리</p>
+
+          {/* 등록된 지점 목록 */}
+          {branches.length === 0 ? (
+            <p className="text-sm text-zinc-400 text-center py-3">등록된 지점이 없습니다</p>
+          ) : (
+            <div className="space-y-2">
+              {branches.map((b) => (
+                <div key={b} className="flex items-center justify-between bg-zinc-50 rounded-xl px-4 py-2.5">
+                  <span className="text-sm font-semibold text-zinc-800">🏢 {b}</span>
+                  <button
+                    onClick={() => handleDeleteBranch(b)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition text-sm font-black"
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 지점 추가 */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="예: 홍대점, 합정점..."
+              value={newBranch}
+              onChange={(e) => setNewBranch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddBranch()}
+              className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none transition"
+            />
+            <button
+              onClick={handleAddBranch}
+              className="px-5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+            >추가</button>
+          </div>
+          <p className="text-xs text-zinc-400">등록된 지점은 트레이너 관리 · 상담 관리 · 스케줄 등에서 사용됩니다.</p>
         </section>
 
         {/* ══════════════════ 직원 호칭 설정 ══════════════════ */}
