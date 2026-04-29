@@ -10,7 +10,7 @@ import SyncBadge from "./SyncBadge";
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname();
   const { profile, loading, isAdmin, activeBranch, signOut } = useAuth();
-  const isPublicPage = pathname === "/login" || pathname === "/signup";
+  const isPublicPage = pathname === "/" || pathname === "/login" || pathname === "/signup";
 
   // 로그인/회원가입 페이지는 Nav 없이
   if (isPublicPage) return <>{children}</>;
