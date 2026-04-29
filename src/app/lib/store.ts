@@ -266,9 +266,10 @@ export function getTrainers(): Trainer[] {
     const raw = JSON.parse(localStorage.getItem(TRAINERS_KEY) || "[]");
     return raw.map((t: Trainer) => ({
       ...t,
+      branch:     t.branch     ?? "",
       salaryType: t.salaryType ?? "base+rate",
       baseSalary: t.baseSalary ?? 0,
-      commRate: t.commRate ?? 50,
+      commRate:   t.commRate   ?? 50,
       sessionFee: t.sessionFee ?? 0,
     }));
   } catch { return []; }

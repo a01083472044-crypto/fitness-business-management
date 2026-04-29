@@ -60,11 +60,11 @@ export default function ConsultationPage() {
   }, []);
 
   // 선택된 지점에 따라 상담자 목록 계산
-  // 지점 미지정(branch="") 트레이너는 어느 지점에서나 표시
+  // 지점 미지정 트레이너(branch가 없거나 "")는 어느 지점에서나 표시
   const counselorNames = (() => {
     if (!form.branch) return allActiveTrainers.map((t) => t.name);
     return allActiveTrainers
-      .filter((t) => t.branch === form.branch || t.branch === "")
+      .filter((t) => t.branch === form.branch || !t.branch)
       .map((t) => t.name);
   })();
 
