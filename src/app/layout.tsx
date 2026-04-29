@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ClientWrapper from "./components/ClientWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "FitBoss",
-  description: "FitBoss",
+  description: "FitBoss — 헬스장 전용 올인원 경영 관리 플랫폼",
 };
 
 export default function RootLayout({
@@ -29,7 +28,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ClientWrapper>{children}</ClientWrapper>
+        {children}
       </body>
     </html>
   );

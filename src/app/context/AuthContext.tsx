@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const init = useCallback(async () => {
     const session = await getSession();
     if (!session) {
-      if (pathname !== "/" && pathname !== "/login" && pathname !== "/signup") router.replace("/login");
+      if (pathname !== "/login" && pathname !== "/signup") router.replace("/login");
       setLoading(false);
       return;
     }
