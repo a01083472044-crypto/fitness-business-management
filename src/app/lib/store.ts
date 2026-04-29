@@ -192,7 +192,19 @@ export interface Consultation {
   createdAt: string;               // 생성일시
 }
 
+// ── 체크인 ─────────────────────────────────────────────────────────────────
+export interface CheckIn {
+  id: string;
+  memberId: string;
+  memberName: string;
+  date: string;   // YYYY-MM-DD
+  time: string;   // HH:MM
+  method: "QR" | "수동";
+  branch: string;
+}
+
 // ── 스토리지 키 ────────────────────────────────────────────────────────────
+const CHECKINS_KEY       = "gym_checkins";
 const SCHEDULE_KEY       = "gym_schedule";
 const MEMBERS_KEY        = "gym_members";
 const COSTS_KEY          = "gym_costs";
@@ -368,6 +380,15 @@ export function getTaxInvoices(): TaxInvoice[] {
 export function saveTaxInvoices(list: TaxInvoice[]) {
   localStorage.setItem(TAX_INVOICES_KEY, JSON.stringify(list));
   pushToCloud("taxInvoices", list);
+}
+
+export function getCheckIns(): CheckIn[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(CHECKINS_KEY) || "[]"); } catch { return []; }
+}
+export function saveCheckIns(list: CheckIn[]) {
+  localStorage.setItem(CHECKINS_KEY, JSON.stringify(list));
+  pushToCloud("checkIns", list);
 }
 
 /** 전체 회원 패키지에서 결제 수수료 합산 → 해당 월 비용에 반영 */

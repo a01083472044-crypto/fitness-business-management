@@ -19,6 +19,7 @@ const KEY_MAP: Record<string, string> = {
   taxInvoices:   "gym_tax_invoices",
   branches:      "gym_branches",
   consultations: "gym_consultations",
+  checkIns:      "gym_checkins",
 };
 
 export type SyncCollection = keyof typeof KEY_MAP;
