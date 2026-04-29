@@ -429,13 +429,16 @@ export default function TrainersPage() {
             </Field>
 
             <Field label="근무 지점">
-              <input
-                type="text"
-                placeholder="예: 홍대점, 합정점"
+              <select
                 value={form.branch}
                 onChange={(e) => setForm({ ...form, branch: e.target.value })}
                 className={inputCls}
-              />
+              >
+                <option value="">선택 안함</option>
+                {savedBranches.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
             </Field>
 
             <Field label="입사일">

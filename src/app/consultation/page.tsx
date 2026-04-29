@@ -60,9 +60,13 @@ export default function ConsultationPage() {
   }, []);
 
   // 선택된 지점에 따라 상담자 목록 계산
-  const counselorNames = form.branch
-    ? allActiveTrainers.filter((t) => t.branch === form.branch).map((t) => t.name)
-    : allActiveTrainers.map((t) => t.name);
+  // 지점 미지정(branch="") 트레이너는 어느 지점에서나 표시
+  const counselorNames = (() => {
+    if (!form.branch) return allActiveTrainers.map((t) => t.name);
+    return allActiveTrainers
+      .filter((t) => t.branch === form.branch || t.branch === "")
+      .map((t) => t.name);
+  })();
 
   const reload = useCallback(() => setList(getConsultations()), []);
 
