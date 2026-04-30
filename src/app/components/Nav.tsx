@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useStaffTerm } from "../context/StaffTermContext";
 
@@ -109,15 +109,11 @@ function AccordionGroup({
 
   const hasActive = resolvedItems.some((i) => i.href === pathname);
   const [open, setOpen] = useState(hasActive);
-  const bodyRef = useRef<HTMLDivElement>(null);
 
   /* 현재 경로가 하위 항목일 때 자동 펼침 */
   useEffect(() => {
     if (hasActive) setOpen(true);
   }, [hasActive]);
-
-  /* max-height 애니메이션을 위한 실제 높이 계산 */
-  const bodyHeight = open ? (bodyRef.current?.scrollHeight ?? 0) : 0;
 
   if (variant === "sidebar") {
     return (
@@ -143,9 +139,11 @@ function AccordionGroup({
 
         {/* 하위 항목 – 슬라이드 애니메이션 */}
         <div
-          ref={bodyRef}
-          style={{ maxHeight: bodyHeight, transition: "max-height 0.22s ease" }}
-          className="overflow-hidden"
+          style={{
+            maxHeight: open ? "400px" : "0px",
+            transition: "max-height 0.25s ease",
+            overflow: "hidden",
+          }}
         >
           <div className="ml-5 mt-0.5 mb-0.5 space-y-0.5 border-l-2 border-zinc-100 pl-2">
             {resolvedItems.map(({ href, label: itemLabel }) => (
@@ -191,9 +189,11 @@ function AccordionGroup({
 
       {/* 하위 항목 – 슬라이드 애니메이션 */}
       <div
-        ref={bodyRef}
-        style={{ maxHeight: bodyHeight, transition: "max-height 0.22s ease" }}
-        className="overflow-hidden"
+        style={{
+          maxHeight: open ? "400px" : "0px",
+          transition: "max-height 0.25s ease",
+          overflow: "hidden",
+        }}
       >
         <div className="grid grid-cols-3 gap-2 px-3 pb-3 pt-1 bg-zinc-50/60">
           {resolvedItems.map(({ href, label: itemLabel }) => (
