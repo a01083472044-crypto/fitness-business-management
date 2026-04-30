@@ -121,16 +121,16 @@ function DropGroup({
 
       {/* 하위 항목 */}
       <div style={{ maxHeight: open ? "400px" : "0px", transition: "max-height 0.25s ease", overflow: "hidden" }}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 px-4 pb-3 pt-1 bg-zinc-50">
+        <div className="flex flex-col gap-0.5 px-3 pb-2 pt-1 bg-zinc-50">
           {resolvedItems.map(({ href, label: lbl }) => (
             <Link
               key={href}
               href={href}
               onClick={onClose}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition ${
                 pathname === href
                   ? "bg-blue-600 text-white"
-                  : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-100"
+                  : "text-zinc-600 hover:bg-zinc-100"
               }`}
             >
               {lbl}
@@ -209,7 +209,7 @@ export default function Nav() {
         )}
       </header>
 
-      {/* ══ 드롭다운 메뉴 패널 ══════════════════════════════════════ */}
+      {/* ══ 왼쪽 드롭다운 패널 ══════════════════════════════════════ */}
       {/* 배경 오버레이 */}
       {menuOpen && (
         <div
@@ -218,16 +218,17 @@ export default function Nav() {
         />
       )}
 
-      {/* 메뉴 패널 */}
+      {/* 왼쪽 패널 – 헤더 아래 왼쪽에서 슬라이드 */}
       <div
-        className="fixed inset-x-0 top-14 z-50 bg-white shadow-xl border-b border-zinc-100 overflow-y-auto"
+        className="fixed left-0 top-14 z-50 bg-white shadow-2xl border-r border-zinc-100 overflow-y-auto"
         style={{
-          maxHeight: menuOpen ? "calc(100vh - 56px)" : "0px",
-          transition: "max-height 0.3s ease",
-          overflow: menuOpen ? "auto" : "hidden",
+          width: "260px",
+          height: "calc(100vh - 56px)",
+          transform: menuOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.25s ease",
         }}
       >
-        <div className="max-w-3xl mx-auto divide-y divide-zinc-100">
+        <div className="divide-y divide-zinc-100">
           {allMenu.map((item) => {
             if (item.type === "link") {
               const active = pathname === item.href;
