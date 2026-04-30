@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useStaffTerm } from "../context/StaffTermContext";
 
-type LinkItem = { type: "link"; href: string; icon: string; label: string; items?: never };
+type LinkItem  = { type: "link";  href: string; icon: string; label: string; items?: never };
 type GroupItem = { type: "group"; icon: string; label: string; items: { href: string; label: string }[]; href?: never };
-type MenuItem = LinkItem | GroupItem;
+type MenuItem  = LinkItem | GroupItem;
 
 /* ── 사이드바 메뉴 구조 ──────────────────────────────────────────── */
 const MENU: MenuItem[] = [
@@ -24,21 +24,21 @@ const MENU: MenuItem[] = [
   {
     type: "group", icon: "📋", label: "운영",
     items: [
-      { href: "/trainers",       label: "트레이너 관리"  },
-      { href: "/sessions",       label: "수업 관리"     },
-      { href: "/consultation",   label: "🗣️ 상담 관리"  },
-      { href: "/checkin",        label: "✅ 체크인 관리" },
-      { href: "/locker",         label: "🔒 락커 관리"  },
+      { href: "/trainers",     label: "트레이너 관리"  },
+      { href: "/sessions",     label: "수업 관리"      },
+      { href: "/consultation", label: "🗣️ 상담 관리"   },
+      { href: "/checkin",      label: "✅ 체크인 관리"  },
+      { href: "/locker",       label: "🔒 락커 관리"   },
     ],
   },
   {
     type: "group", icon: "👔", label: "급여·인사",
     items: [
-      { href: "/salary",  label: "급여 책정"        },
-      { href: "/profit",  label: "📊 트레이너 기여도" },
+      { href: "/salary", label: "급여 책정"        },
+      { href: "/profit", label: "📊 트레이너 기여도" },
     ],
   },
-  { type: "link",  href: "/costs",  icon: "💸", label: "비용" },
+  { type: "link", href: "/costs", icon: "💸", label: "비용" },
   {
     type: "group", icon: "💰", label: "재무",
     items: [
@@ -82,21 +82,22 @@ const ADMIN_ITEM: MenuItem = {
 
 /* ── 모바일 하단 탭 ─────────────────────────────────────────────── */
 const BOTTOM_TABS = [
-  { href: "/dashboard", icon: "🏠", label: "홈"   },
-  { href: "/members",   icon: "👤", label: "회원" },
-  { href: "/costs",     icon: "💸", label: "비용" },
+  { href: "/dashboard", icon: "🏠", label: "홈"    },
+  { href: "/members",   icon: "👤", label: "회원"  },
+  { href: "/costs",     icon: "💸", label: "비용"  },
   { href: "/schedule",  icon: "📅", label: "스케줄" },
 ];
 
-/* ── 사이드바 그룹 아이템 ───────────────────────────────────────── */
-function SideGroup({
-  icon, label, items, pathname, staffTerm,
+/* ── 아코디언 그룹 (사이드바 / 드로어 공통) ────────────────────── */
+function AccordionGroup({
+  icon, label, items, pathname, staffTerm, variant = "sidebar",
 }: {
   icon: string;
   label: string;
   items: { href: string; label: string }[];
   pathname: string;
   staffTerm: string;
+  variant?: "sidebar" | "drawer";
 }) {
   const resolvedItems = items.map((item) =>
     item.href === "/trainers"
@@ -108,48 +109,108 @@ function SideGroup({
 
   const hasActive = resolvedItems.some((i) => i.href === pathname);
   const [open, setOpen] = useState(hasActive);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
+  /* 현재 경로가 하위 항목일 때 자동 펼침 */
   useEffect(() => {
     if (hasActive) setOpen(true);
   }, [hasActive]);
 
+  /* max-height 애니메이션을 위한 실제 높이 계산 */
+  const bodyHeight = open ? (bodyRef.current?.scrollHeight ?? 0) : 0;
+
+  if (variant === "sidebar") {
+    return (
+      <div>
+        {/* 그룹 헤더 버튼 */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+            hasActive
+              ? "bg-blue-50 text-blue-600"
+              : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+          }`}
+        >
+          <span className="text-base w-5 text-center">{icon}</span>
+          <span className="flex-1 text-left">{label}</span>
+          <svg
+            className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${open ? "rotate-180" : ""}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* 하위 항목 – 슬라이드 애니메이션 */}
+        <div
+          ref={bodyRef}
+          style={{ maxHeight: bodyHeight, transition: "max-height 0.22s ease" }}
+          className="overflow-hidden"
+        >
+          <div className="ml-5 mt-0.5 mb-0.5 space-y-0.5 border-l-2 border-zinc-100 pl-2">
+            {resolvedItems.map(({ href, label: itemLabel }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`block px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  pathname === href
+                    ? "bg-blue-600 text-white"
+                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                }`}
+              >
+                {itemLabel}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── 드로어 variant ─────────────────────────────────────────── */
   return (
-    <div>
+    <div className="rounded-2xl overflow-hidden border border-zinc-100">
+      {/* 그룹 헤더 버튼 */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+        className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold transition-colors ${
           hasActive
             ? "bg-blue-50 text-blue-600"
-            : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+            : "bg-white text-zinc-700 hover:bg-zinc-50"
         }`}
       >
-        <span className="text-base w-5 text-center">{icon}</span>
+        <span>{icon}</span>
         <span className="flex-1 text-left">{label}</span>
         <svg
-          className={`w-3.5 h-3.5 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}
+          className={`w-4 h-4 transition-transform duration-200 shrink-0 ${open ? "rotate-180" : ""}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      {open && (
-        <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-zinc-100 pl-2">
+      {/* 하위 항목 – 슬라이드 애니메이션 */}
+      <div
+        ref={bodyRef}
+        style={{ maxHeight: bodyHeight, transition: "max-height 0.22s ease" }}
+        className="overflow-hidden"
+      >
+        <div className="grid grid-cols-3 gap-2 px-3 pb-3 pt-1 bg-zinc-50/60">
           {resolvedItems.map(({ href, label: itemLabel }) => (
             <Link
               key={href}
               href={href}
-              className={`block px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              className={`flex items-center justify-center py-3 px-2 rounded-2xl text-xs font-semibold text-center transition ${
                 pathname === href
                   ? "bg-blue-600 text-white"
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                  : "bg-white text-zinc-600 hover:bg-zinc-100"
               }`}
             >
               {itemLabel}
             </Link>
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -163,7 +224,7 @@ export default function Nav() {
 
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
-  const allMenu = isAdmin ? [...MENU, ADMIN_ITEM] : MENU;
+  const allMenu    = isAdmin ? [...MENU, ADMIN_ITEM] : MENU;
   const inBottomTab = BOTTOM_TABS.some((t) => t.href === pathname);
 
   return (
@@ -197,13 +258,14 @@ export default function Nav() {
               );
             }
             return (
-              <SideGroup
+              <AccordionGroup
                 key={item.label}
-                icon={item.icon!}
+                icon={item.icon}
                 label={item.label}
-                items={item.items!}
+                items={item.items}
                 pathname={pathname}
                 staffTerm={staffTerm}
+                variant="sidebar"
               />
             );
           })}
@@ -247,15 +309,17 @@ export default function Nav() {
         />
       )}
       <div
-        className={`md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ${
+        className={`md:hidden fixed inset-x-0 bottom-0 z-50 bg-zinc-50 rounded-t-3xl shadow-2xl transition-transform duration-300 ${
           drawerOpen ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxHeight: "85vh" }}
       >
+        {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-zinc-200 rounded-full" />
+          <div className="w-10 h-1 bg-zinc-300 rounded-full" />
         </div>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-100">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-200 bg-white rounded-t-3xl">
           <div className="flex items-center gap-2">
             <span className="text-lg">💪</span>
             <p className="font-black text-zinc-900 text-base">FitBoss</p>
@@ -265,15 +329,19 @@ export default function Nav() {
             className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500"
           >✕</button>
         </div>
-        <div className="overflow-y-auto px-3 pb-8 pt-3 space-y-1" style={{ maxHeight: "calc(85vh - 90px)" }}>
+
+        {/* 목록 */}
+        <div className="overflow-y-auto px-3 pb-10 pt-3 space-y-2" style={{ maxHeight: "calc(85vh - 90px)" }}>
           {allMenu.map((item) => {
             if (item.type === "link") {
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
-                    pathname === item.href ? "bg-blue-600 text-white" : "text-zinc-600 hover:bg-zinc-50"
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition border ${
+                    pathname === item.href
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-zinc-700 border-zinc-100 hover:bg-zinc-50"
                   }`}
                 >
                   <span>{item.icon}</span>{item.label}
@@ -281,26 +349,15 @@ export default function Nav() {
               );
             }
             return (
-              <div key={item.label}>
-                <p className="text-xs font-black text-zinc-400 uppercase tracking-wider px-4 pt-3 pb-1">
-                  {item.icon} {item.label}
-                </p>
-                <div className="grid grid-cols-3 gap-2 px-1">
-                  {(item.items ?? []).map(({ href, label }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={`flex items-center justify-center py-3 px-2 rounded-2xl text-xs font-semibold text-center transition ${
-                        pathname === href
-                          ? "bg-blue-600 text-white"
-                          : "bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
-                      }`}
-                    >
-                      {label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+              <AccordionGroup
+                key={item.label}
+                icon={item.icon}
+                label={item.label}
+                items={item.items}
+                pathname={pathname}
+                staffTerm={staffTerm}
+                variant="drawer"
+              />
             );
           })}
         </div>
