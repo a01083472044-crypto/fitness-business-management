@@ -16,7 +16,7 @@ export default function LoginPage() {
   // 이미 로그인된 경우 홈으로
   useEffect(() => {
     getSession().then((s) => {
-      if (s) router.replace("/");
+      if (s) router.replace("/dashboard");
       else setChecking(false);
     });
   }, [router]);
@@ -31,7 +31,7 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    router.replace("/");
+    router.replace("/dashboard");
   };
 
   if (checking) {
