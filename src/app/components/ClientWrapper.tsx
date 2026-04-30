@@ -68,7 +68,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               : isAdmin
               ? "🔑 관리자 (전체 지점 접근)"
               : `📍 ${activeBranch || "미지정 지점"} · ${profile.full_name || profile.email}`}
-            {" "}[role:{profile?.role}|db:{process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(8,20)}]
+            {" "}[role:{profile?.role}|id:{profile?.id?.slice(0,8)}]
           </span>
           <div className="flex items-center gap-2">
             <SyncBadge />
