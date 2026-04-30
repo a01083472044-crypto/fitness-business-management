@@ -12,7 +12,6 @@ type MenuItem  = LinkItem | GroupItem;
 
 /* ── 메뉴 구조 ───────────────────────────────────────────────────── */
 const MENU: MenuItem[] = [
-  { type: "link",  href: "/dashboard", icon: "🏠", label: "대시보드" },
   { type: "link",  href: "/members",   icon: "👤", label: "회원관리" },
   {
     type: "group", icon: "📅", label: "스케줄",
@@ -73,6 +72,7 @@ const MENU: MenuItem[] = [
       { href: "/settings",  label: "🏷️ 설정"        },
     ],
   },
+  { type: "link", href: "/dashboard", icon: "🏠", label: "대시보드" },
 ];
 
 const ADMIN_ITEM: MenuItem = {
