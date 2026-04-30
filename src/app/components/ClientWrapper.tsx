@@ -54,8 +54,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <KakaoAutoSender />
       <Nav />
-      {/* 사이드바 너비(md:pl-52)만큼 밀어주기 */}
-      <div className="md:pl-52">
+      {/* 상단 헤더(h-14 = 56px) 높이만큼 밀어주기 */}
+      <div className="pt-14">
         {/* 지점 배너 */}
         <div className={`px-4 py-1.5 text-xs font-semibold flex items-center justify-between ${
           isAdmin ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"
@@ -75,8 +75,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </div>
-        {/* 모바일 하단 탭바 높이만큼 패딩 (md 이상에서는 불필요) */}
-        <div className="pb-16 md:pb-0">
+        <div>
           {children}
         </div>
       </div>

@@ -10,7 +10,7 @@ type LinkItem  = { type: "link";  href: string; icon: string; label: string; ite
 type GroupItem = { type: "group"; icon: string; label: string; items: { href: string; label: string }[]; href?: never };
 type MenuItem  = LinkItem | GroupItem;
 
-/* ── 사이드바 메뉴 구조 ──────────────────────────────────────────── */
+/* ── 메뉴 구조 ───────────────────────────────────────────────────── */
 const MENU: MenuItem[] = [
   { type: "link",  href: "/dashboard", icon: "🏠", label: "대시보드" },
   { type: "link",  href: "/members",   icon: "👤", label: "회원관리" },
@@ -24,11 +24,11 @@ const MENU: MenuItem[] = [
   {
     type: "group", icon: "📋", label: "운영",
     items: [
-      { href: "/trainers",     label: "트레이너 관리"  },
-      { href: "/sessions",     label: "수업 관리"      },
-      { href: "/consultation", label: "🗣️ 상담 관리"   },
-      { href: "/checkin",      label: "✅ 체크인 관리"  },
-      { href: "/locker",       label: "🔒 락커 관리"   },
+      { href: "/trainers",     label: "트레이너 관리" },
+      { href: "/sessions",     label: "수업 관리"     },
+      { href: "/consultation", label: "🗣️ 상담 관리"  },
+      { href: "/checkin",      label: "✅ 체크인 관리" },
+      { href: "/locker",       label: "🔒 락커 관리"  },
     ],
   },
   {
@@ -80,133 +80,60 @@ const ADMIN_ITEM: MenuItem = {
   items: [{ href: "/admin", label: "계정관리" }],
 };
 
-/* ── 모바일 하단 탭 ─────────────────────────────────────────────── */
-const BOTTOM_TABS = [
-  { href: "/dashboard", icon: "🏠", label: "홈"    },
-  { href: "/members",   icon: "👤", label: "회원"  },
-  { href: "/costs",     icon: "💸", label: "비용"  },
-  { href: "/schedule",  icon: "📅", label: "스케줄" },
-];
-
-/* ── 아코디언 그룹 (사이드바 / 드로어 공통) ────────────────────── */
-function AccordionGroup({
-  icon, label, items, pathname, staffTerm, variant = "sidebar",
+/* ── 드롭다운 아코디언 그룹 ─────────────────────────────────────── */
+function DropGroup({
+  icon, label, items, pathname, staffTerm, onClose,
 }: {
-  icon: string;
-  label: string;
+  icon: string; label: string;
   items: { href: string; label: string }[];
-  pathname: string;
-  staffTerm: string;
-  variant?: "sidebar" | "drawer";
+  pathname: string; staffTerm: string;
+  onClose: () => void;
 }) {
   const resolvedItems = items.map((item) =>
-    item.href === "/trainers"
-      ? { ...item, label: `${staffTerm} 관리` }
-      : item.href === "/profit"
-      ? { ...item, label: `📊 ${staffTerm} 기여도` }
-      : item
+    item.href === "/trainers" ? { ...item, label: `${staffTerm} 관리` }
+    : item.href === "/profit" ? { ...item, label: `📊 ${staffTerm} 기여도` }
+    : item
   );
 
   const hasActive = resolvedItems.some((i) => i.href === pathname);
   const [open, setOpen] = useState(hasActive);
 
-  /* 현재 경로가 하위 항목일 때 자동 펼침 */
-  useEffect(() => {
-    if (hasActive) setOpen(true);
-  }, [hasActive]);
+  useEffect(() => { if (hasActive) setOpen(true); }, [hasActive]);
 
-  if (variant === "sidebar") {
-    return (
-      <div>
-        {/* 그룹 헤더 버튼 */}
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            hasActive
-              ? "bg-blue-50 text-blue-600"
-              : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
-          }`}
-        >
-          <span className="text-base w-5 text-center">{icon}</span>
-          <span className="flex-1 text-left">{label}</span>
-          <svg
-            className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${open ? "rotate-180" : ""}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {/* 하위 항목 – 슬라이드 애니메이션 */}
-        <div
-          style={{
-            maxHeight: open ? "400px" : "0px",
-            transition: "max-height 0.25s ease",
-            overflow: "hidden",
-          }}
-        >
-          <div className="ml-5 mt-0.5 mb-0.5 space-y-0.5 border-l-2 border-zinc-100 pl-2">
-            {resolvedItems.map(({ href, label: itemLabel }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`block px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  pathname === href
-                    ? "bg-blue-600 text-white"
-                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
-                }`}
-              >
-                {itemLabel}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ── 드로어 variant ─────────────────────────────────────────── */
   return (
-    <div className="rounded-2xl overflow-hidden border border-zinc-100">
-      {/* 그룹 헤더 버튼 */}
+    <div>
+      {/* 그룹 헤더 */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold transition-colors ${
-          hasActive
-            ? "bg-blue-50 text-blue-600"
-            : "bg-white text-zinc-700 hover:bg-zinc-50"
+        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${
+          hasActive ? "text-blue-600 bg-blue-50" : "text-zinc-700 hover:bg-zinc-50"
         }`}
       >
-        <span>{icon}</span>
+        <span className="w-5 text-center">{icon}</span>
         <span className="flex-1 text-left">{label}</span>
         <svg
-          className={`w-4 h-4 transition-transform duration-200 shrink-0 ${open ? "rotate-180" : ""}`}
+          className={`w-4 h-4 transition-transform duration-200 shrink-0 text-zinc-400 ${open ? "rotate-180" : ""}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      {/* 하위 항목 – 슬라이드 애니메이션 */}
-      <div
-        style={{
-          maxHeight: open ? "400px" : "0px",
-          transition: "max-height 0.25s ease",
-          overflow: "hidden",
-        }}
-      >
-        <div className="grid grid-cols-3 gap-2 px-3 pb-3 pt-1 bg-zinc-50/60">
-          {resolvedItems.map(({ href, label: itemLabel }) => (
+      {/* 하위 항목 */}
+      <div style={{ maxHeight: open ? "400px" : "0px", transition: "max-height 0.25s ease", overflow: "hidden" }}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 px-4 pb-3 pt-1 bg-zinc-50">
+          {resolvedItems.map(({ href, label: lbl }) => (
             <Link
               key={href}
               href={href}
-              className={`flex items-center justify-center py-3 px-2 rounded-2xl text-xs font-semibold text-center transition ${
+              onClick={onClose}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
                 pathname === href
                   ? "bg-blue-600 text-white"
-                  : "bg-white text-zinc-600 hover:bg-zinc-100"
+                  : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-100"
               }`}
             >
-              {itemLabel}
+              {lbl}
             </Link>
           ))}
         </div>
@@ -220,25 +147,87 @@ export default function Nav() {
   const pathname      = usePathname();
   const { isAdmin }   = useAuth();
   const { staffTerm } = useStaffTerm();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+  /* 페이지 이동 시 메뉴 닫기 */
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
 
-  const allMenu    = isAdmin ? [...MENU, ADMIN_ITEM] : MENU;
-  const inBottomTab = BOTTOM_TABS.some((t) => t.href === pathname);
+  const allMenu = isAdmin ? [...MENU, ADMIN_ITEM] : MENU;
+
+  /* 현재 페이지 이름 표시용 */
+  const currentLabel = (() => {
+    for (const item of allMenu) {
+      if (item.type === "link" && item.href === pathname) return item.label;
+      if (item.type === "group") {
+        const found = item.items.find((i) => i.href === pathname);
+        if (found) return found.label;
+      }
+    }
+    return "";
+  })();
 
   return (
     <>
-      {/* ══ 데스크톱 왼쪽 사이드바 ════════════════════════════════ */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-52 bg-white border-r border-zinc-100 z-40">
+      {/* ══ 상단 헤더 바 ════════════════════════════════════════════ */}
+      <header className="fixed top-0 inset-x-0 z-50 h-14 bg-white border-b border-zinc-100 flex items-center gap-3 px-4 shadow-sm">
+        {/* 햄버거 버튼 */}
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className={`flex flex-col justify-center items-center w-9 h-9 rounded-lg gap-[5px] transition-colors ${
+            menuOpen ? "bg-blue-50 text-blue-600" : "hover:bg-zinc-100 text-zinc-600"
+          }`}
+          aria-label="메뉴 열기"
+        >
+          <span
+            className={`block h-[2px] w-5 rounded-full bg-current transition-all duration-200 origin-center ${
+              menuOpen ? "rotate-45 translate-y-[7px]" : ""
+            }`}
+          />
+          <span
+            className={`block h-[2px] w-5 rounded-full bg-current transition-all duration-200 ${
+              menuOpen ? "opacity-0 scale-x-0" : ""
+            }`}
+          />
+          <span
+            className={`block h-[2px] w-5 rounded-full bg-current transition-all duration-200 origin-center ${
+              menuOpen ? "-rotate-45 -translate-y-[7px]" : ""
+            }`}
+          />
+        </button>
+
         {/* 로고 */}
-        <Link href="/dashboard" className="flex items-center gap-2 px-4 py-4 border-b border-zinc-100 shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-1.5">
           <span className="text-xl">💪</span>
           <span className="font-black text-zinc-900 text-base tracking-tight">FitBoss</span>
         </Link>
 
-        {/* 메뉴 */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+        {/* 현재 페이지 이름 */}
+        {currentLabel && (
+          <span className="text-xs font-semibold text-zinc-400 border-l border-zinc-200 pl-3 ml-1 hidden sm:block">
+            {currentLabel}
+          </span>
+        )}
+      </header>
+
+      {/* ══ 드롭다운 메뉴 패널 ══════════════════════════════════════ */}
+      {/* 배경 오버레이 */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 top-14 z-40 bg-black/20"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      {/* 메뉴 패널 */}
+      <div
+        className="fixed inset-x-0 top-14 z-50 bg-white shadow-xl border-b border-zinc-100 overflow-y-auto"
+        style={{
+          maxHeight: menuOpen ? "calc(100vh - 56px)" : "0px",
+          transition: "max-height 0.3s ease",
+          overflow: menuOpen ? "auto" : "hidden",
+        }}
+      >
+        <div className="max-w-3xl mx-auto divide-y divide-zinc-100">
           {allMenu.map((item) => {
             if (item.type === "link") {
               const active = pathname === item.href;
@@ -246,120 +235,32 @@ export default function Nav() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3.5 text-sm font-bold transition-colors ${
                     active
-                      ? "bg-blue-600 text-white"
-                      : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                      ? "text-blue-600 bg-blue-50"
+                      : "text-zinc-700 hover:bg-zinc-50"
                   }`}
                 >
-                  <span className="text-base w-5 text-center">{item.icon}</span>
+                  <span className="w-5 text-center">{item.icon}</span>
                   {item.label}
                 </Link>
               );
             }
             return (
-              <AccordionGroup
+              <DropGroup
                 key={item.label}
                 icon={item.icon}
                 label={item.label}
                 items={item.items}
                 pathname={pathname}
                 staffTerm={staffTerm}
-                variant="sidebar"
+                onClose={() => setMenuOpen(false)}
               />
             );
           })}
-        </nav>
-      </aside>
-
-      {/* ══ 모바일 하단 탭바 ═══════════════════════════════════════ */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white border-t border-zinc-100">
-        <div className="grid grid-cols-5 h-16">
-          {BOTTOM_TABS.map(({ href, icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-                pathname === href ? "text-blue-600" : "text-zinc-400"
-              }`}
-            >
-              <span className="text-xl leading-none">{icon}</span>
-              {label}
-            </Link>
-          ))}
-
-          {/* 더보기 */}
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className={`flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition ${
-              !inBottomTab ? "text-blue-600" : "text-zinc-400"
-            }`}
-          >
-            <span className="text-xl leading-none">☰</span>
-            더보기
-          </button>
-        </div>
-      </nav>
-
-      {/* ══ 모바일 드로어 ════════════════════════════════════════════ */}
-      {drawerOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-50 bg-black/40"
-          onClick={() => setDrawerOpen(false)}
-        />
-      )}
-      <div
-        className={`md:hidden fixed inset-x-0 bottom-0 z-50 bg-zinc-50 rounded-t-3xl shadow-2xl transition-transform duration-300 ${
-          drawerOpen ? "translate-y-0" : "translate-y-full"
-        }`}
-        style={{ maxHeight: "85vh" }}
-      >
-        {/* 핸들 */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-zinc-300 rounded-full" />
-        </div>
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-200 bg-white rounded-t-3xl">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">💪</span>
-            <p className="font-black text-zinc-900 text-base">FitBoss</p>
-          </div>
-          <button
-            onClick={() => setDrawerOpen(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500"
-          >✕</button>
-        </div>
-
-        {/* 목록 */}
-        <div className="overflow-y-auto px-3 pb-10 pt-3 space-y-2" style={{ maxHeight: "calc(85vh - 90px)" }}>
-          {allMenu.map((item) => {
-            if (item.type === "link") {
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition border ${
-                    pathname === item.href
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-zinc-700 border-zinc-100 hover:bg-zinc-50"
-                  }`}
-                >
-                  <span>{item.icon}</span>{item.label}
-                </Link>
-              );
-            }
-            return (
-              <AccordionGroup
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                items={item.items}
-                pathname={pathname}
-                staffTerm={staffTerm}
-                variant="drawer"
-              />
-            );
-          })}
+          {/* 하단 여백 */}
+          <div className="h-4" />
         </div>
       </div>
     </>
