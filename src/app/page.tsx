@@ -1,25 +1,8 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
+import FaqAccordion from "./components/FaqAccordion";
+import StickyNav from "./components/StickyNav";
 
-/* ── 애니메이션 카운터 ────────────────────────────────────────────── */
-function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const step = Math.ceil(target / 60);
-    const id = setInterval(() => {
-      start += step;
-      if (start >= target) { setVal(target); clearInterval(id); }
-      else setVal(start);
-    }, 20);
-    return () => clearInterval(id);
-  }, [target]);
-  return <>{val.toLocaleString()}{suffix}</>;
-}
-
-/* ── 기능 카드 데이터 ─────────────────────────────────────────────── */
+/* ── 기능 카드 데이터 ───────────────────────────────────── */
 const FEATURES = [
   { icon: "👥", title: "회원 관리", desc: "등록·수정·검색·만료 알림까지. 한 화면에서 전체 회원을 파악하세요." },
   { icon: "📊", title: "매출·수익 분석", desc: "순이익이 얼마인지 즉시 확인. 항목별 비용까지 자동 집계됩니다." },
@@ -31,7 +14,6 @@ const FEATURES = [
   { icon: "☁️", title: "클라우드 동기화", desc: "PC·태블릿·스마트폰 어디서든 실시간 동기화. 데이터 손실 걱정 없습니다." },
 ];
 
-/* ── 페인포인트 데이터 ────────────────────────────────────────────── */
 const PAINS = [
   { before: "📋 엑셀로 회원 관리", after: "앱 하나로 전체 현황 즉시 파악" },
   { before: "💬 카카오톡으로 일정 공유", after: "지점·트레이너별 자동 스케줄 관리" },
@@ -39,36 +21,33 @@ const PAINS = [
   { before: "🔍 락커 현황 일일이 확인", after: "시각적 그리드로 빈 락커 즉시 파악" },
 ];
 
-/* ── 이용 후기 ────────────────────────────────────────────────────── */
 const REVIEWS = [
-  { name: "김○○ 원장", loc: "강남 PT 센터", star: 5, text: "회원 만료 알림이 자동으로 오니까 놓치는 게 없어요. 매달 말일 장부 정리가 10분으로 줄었습니다." },
-  { name: "이○○ 대표", loc: "홍대 피트니스", star: 5, text: "지점이 3개인데 한 화면에서 다 볼 수 있어서 진짜 편해요. QR 체크인은 직원들이 특히 좋아합니다." },
-  { name: "박○○ 원장", loc: "수원 헬스클럽", star: 5, text: "기존에 쓰던 관리 프로그램보다 훨씬 직관적이에요. 설치도 필요 없고 폰에서도 바로 확인됩니다." },
+  { name: "김○○ 원장", loc: "강남 PT 센터", text: "회원 만료 알림이 자동으로 오니까 놓치는 게 없어요. 매달 말일 장부 정리가 10분으로 줄었습니다." },
+  { name: "이○○ 대표", loc: "홍대 피트니스", text: "지점이 3개인데 한 화면에서 다 볼 수 있어서 진짜 편해요. QR 체크인은 직원들이 특히 좋아합니다." },
+  { name: "박○○ 원장", loc: "수원 헬스클럽", text: "기존에 쓰던 관리 프로그램보다 훨씬 직관적이에요. 설치도 필요 없고 폰에서도 바로 확인됩니다." },
 ];
 
-/* ── 요금제 ───────────────────────────────────────────────────────── */
 const PLANS = [
   {
     name: "스타터", price: "무료", period: "",
-    color: "border-zinc-200", badge: "", badgeColor: "",
+    border: "border-zinc-200", badge: null,
     features: ["회원 관리 (50명)", "매출 기본 집계", "체크인 관리", "클라우드 자동저장"],
-    cta: "무료로 시작", ctaStyle: "bg-zinc-900 text-white hover:bg-zinc-700",
+    cta: "무료로 시작", ctaClass: "bg-zinc-900 text-white hover:bg-zinc-700",
   },
   {
     name: "프로", price: "₩29,000", period: "/월",
-    color: "border-blue-500 shadow-xl shadow-blue-100", badge: "가장 인기", badgeColor: "bg-blue-500 text-white",
+    border: "border-blue-500 shadow-xl shadow-blue-100", badge: "가장 인기",
     features: ["회원 무제한", "트레이너·급여 관리", "상담 퍼널 분석", "락커 관리", "세금계산서·정산", "멀티 지점 관리", "우선 고객지원"],
-    cta: "14일 무료 체험", ctaStyle: "bg-blue-600 text-white hover:bg-blue-500",
+    cta: "14일 무료 체험", ctaClass: "bg-blue-600 text-white hover:bg-blue-500",
   },
   {
     name: "엔터프라이즈", price: "문의", period: "",
-    color: "border-zinc-200", badge: "", badgeColor: "",
+    border: "border-zinc-200", badge: null,
     features: ["프로 전체 포함", "전용 온보딩", "맞춤형 기능 개발", "전담 매니저"],
-    cta: "상담 요청", ctaStyle: "bg-zinc-900 text-white hover:bg-zinc-700",
+    cta: "상담 요청", ctaClass: "bg-zinc-900 text-white hover:bg-zinc-700",
   },
 ];
 
-/* ── FAQ ──────────────────────────────────────────────────────────── */
 const FAQS = [
   { q: "설치가 필요한가요?", a: "아닙니다. 웹 브라우저에서 바로 사용할 수 있습니다. PC·스마트폰·태블릿 모두 지원합니다." },
   { q: "기존 데이터를 옮길 수 있나요?", a: "네, 엑셀 데이터를 손쉽게 가져올 수 있도록 지원합니다. 온보딩 담당자가 도와드립니다." },
@@ -77,41 +56,25 @@ const FAQS = [
   { q: "무료 플랜에서 유료 전환 시 데이터가 유지되나요?", a: "100% 유지됩니다. 플랜 변경과 동시에 모든 기능이 즉시 활성화됩니다." },
 ];
 
+const STATS = [
+  { value: "2시간", label: "하루 절감 업무시간" },
+  { value: "98%", label: "데이터 보존율" },
+  { value: "500+", label: "사용 중인 헬스장" },
+  { value: "14일", label: "무료 체험 기간" },
+];
+
 export default function LandingPage() {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <div className="min-h-screen bg-white text-zinc-900 font-sans">
+    <div className="min-h-screen bg-white text-zinc-900">
 
-      {/* ── STICKY NAV ─────────────────────────────────────────────── */}
-      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/95 backdrop-blur border-b border-zinc-100 shadow-sm" : "bg-transparent"}`}>
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-xl font-black text-blue-600">💪 FitBoss</span>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-500">
-            <a href="#features" className="hover:text-zinc-900 transition-colors">기능</a>
-            <a href="#pricing" className="hover:text-zinc-900 transition-colors">요금제</a>
-            <a href="#faq" className="hover:text-zinc-900 transition-colors">FAQ</a>
-          </div>
-          <Link href="/members" className="bg-blue-600 text-white text-sm font-bold px-5 py-2 rounded-full hover:bg-blue-500 transition-colors">
-            무료로 시작하기 →
-          </Link>
-        </div>
-      </header>
+      {/* ── STICKY NAV (client component) ─────────── */}
+      <StickyNav />
 
-      {/* ── HERO ───────────────────────────────────────────────────── */}
+      {/* ── HERO ─────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-zinc-950 via-blue-950 to-zinc-900 pt-32 pb-24 px-6 text-center">
-        {/* 배경 그라데이션 글로우 */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-3xl" />
         </div>
-
         <div className="relative max-w-3xl mx-auto">
           <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/40 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-300 mb-6">
             🚀 헬스장 전용 올인원 경영 플랫폼
@@ -125,22 +88,20 @@ export default function LandingPage() {
             회원 관리·매출 분석·트레이너 정산·락커·체크인까지<br />
             <strong className="text-white">원장님의 시간을 하루 2시간 돌려드립니다.</strong>
           </p>
-
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/members" className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/50 hover:scale-105">
+            <Link href="/members" className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/50">
               무료로 시작하기 → 지금 바로
             </Link>
             <a href="#features" className="border border-zinc-600 hover:border-zinc-400 text-zinc-300 hover:text-white font-semibold text-lg px-8 py-4 rounded-2xl transition-all">
               기능 둘러보기
             </a>
           </div>
-
           <p className="mt-5 text-xs text-zinc-500">신용카드 불필요 · 설치 없음 · 즉시 시작</p>
         </div>
 
-        {/* 헤로 대시보드 목업 */}
+        {/* 대시보드 목업 */}
         <div className="relative max-w-4xl mx-auto mt-16 rounded-2xl overflow-hidden border border-zinc-700/50 shadow-2xl shadow-black/50">
-          <div className="bg-zinc-800/80 backdrop-blur px-4 py-3 flex items-center gap-2 border-b border-zinc-700">
+          <div className="bg-zinc-800/80 px-4 py-3 flex items-center gap-2 border-b border-zinc-700">
             <span className="w-3 h-3 rounded-full bg-red-500" />
             <span className="w-3 h-3 rounded-full bg-yellow-500" />
             <span className="w-3 h-3 rounded-full bg-green-500" />
@@ -148,15 +109,15 @@ export default function LandingPage() {
           </div>
           <div className="bg-zinc-900 p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: "이번 달 수익", value: "₩3,840,000", up: "+12%" },
-              { label: "전체 회원", value: "124명", up: "+8명" },
-              { label: "이번 달 신규", value: "18명", up: "+3명" },
-              { label: "체크인 (오늘)", value: "34회", up: "" },
+              { label: "이번 달 수익", value: "₩3,840,000", sub: "+12%" },
+              { label: "전체 회원", value: "124명", sub: "+8명" },
+              { label: "이번 달 신규", value: "18명", sub: "+3명" },
+              { label: "체크인 (오늘)", value: "34회", sub: "" },
             ].map((s) => (
               <div key={s.label} className="bg-zinc-800 rounded-xl p-4">
                 <p className="text-xs text-zinc-500">{s.label}</p>
                 <p className="text-xl font-black text-white mt-1">{s.value}</p>
-                {s.up && <p className="text-xs text-emerald-400 mt-1">{s.up}</p>}
+                {s.sub && <p className="text-xs text-emerald-400 mt-1">{s.sub}</p>}
               </div>
             ))}
           </div>
@@ -168,24 +129,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 숫자로 보는 효과 ──────────────────────────────────────── */}
+      {/* ── 숫자 통계 ────────────────────────────── */}
       <section className="bg-blue-600 py-14 px-6">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { target: 2, suffix: "시간", label: "하루 절감 업무시간" },
-            { target: 98, suffix: "%", label: "데이터 보존율" },
-            { target: 500, suffix: "+", label: "사용 중인 헬스장" },
-            { target: 14, suffix: "일", label: "무료 체험 기간" },
-          ].map((s) => (
+          {STATS.map((s) => (
             <div key={s.label}>
-              <p className="text-4xl font-black text-white"><CountUp target={s.target} suffix={s.suffix} /></p>
+              <p className="text-4xl font-black text-white">{s.value}</p>
               <p className="text-blue-100 text-sm mt-1 font-medium">{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── PAIN → GAIN ──────────────────────────────────────────── */}
+      {/* ── PAIN → GAIN ──────────────────────────── */}
       <section className="py-20 px-6 bg-zinc-50">
         <div className="max-w-3xl mx-auto text-center mb-12">
           <h2 className="text-3xl font-black text-zinc-900">아직도 이렇게 운영하고 계신가요?</h2>
@@ -203,7 +159,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FEATURES ─────────────────────────────────────────────── */}
+      {/* ── FEATURES ─────────────────────────────── */}
       <section id="features" className="py-20 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
@@ -212,7 +168,7 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {FEATURES.map((f) => (
-              <div key={f.title} className="group bg-zinc-50 hover:bg-blue-50 border border-zinc-100 hover:border-blue-200 rounded-2xl p-6 transition-all hover:shadow-md hover:-translate-y-1">
+              <div key={f.title} className="bg-zinc-50 hover:bg-blue-50 border border-zinc-100 hover:border-blue-200 rounded-2xl p-6 transition-all hover:shadow-md">
                 <span className="text-3xl">{f.icon}</span>
                 <h3 className="mt-3 font-bold text-zinc-900">{f.title}</h3>
                 <p className="mt-2 text-sm text-zinc-500 leading-relaxed">{f.desc}</p>
@@ -222,8 +178,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
-      <section className="py-20 px-6 bg-gradient-to-b from-zinc-50 to-white">
+      {/* ── HOW IT WORKS ─────────────────────────── */}
+      <section className="py-20 px-6 bg-zinc-50">
         <div className="max-w-4xl mx-auto text-center mb-12">
           <h2 className="text-3xl font-black text-zinc-900">딱 3단계면 됩니다</h2>
           <p className="mt-3 text-zinc-500">복잡한 설치나 교육 없이, 오늘 바로 시작할 수 있습니다.</p>
@@ -244,7 +200,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── REVIEWS ──────────────────────────────────────────────── */}
+      {/* ── REVIEWS ──────────────────────────────── */}
       <section className="py-20 px-6 bg-zinc-950">
         <div className="max-w-5xl mx-auto text-center mb-12">
           <h2 className="text-3xl font-black text-white">원장님들의 실제 후기</h2>
@@ -254,7 +210,7 @@ export default function LandingPage() {
           {REVIEWS.map((r) => (
             <div key={r.name} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
               <div className="flex gap-1 mb-4">
-                {Array.from({ length: r.star }).map((_, i) => <span key={i} className="text-yellow-400 text-sm">★</span>)}
+                {[1,2,3,4,5].map((i) => <span key={i} className="text-yellow-400 text-sm">★</span>)}
               </div>
               <p className="text-zinc-300 text-sm leading-relaxed">&ldquo;{r.text}&rdquo;</p>
               <div className="mt-5 flex items-center gap-3">
@@ -269,17 +225,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── PRICING ──────────────────────────────────────────────── */}
+      {/* ── PRICING ──────────────────────────────── */}
       <section id="pricing" className="py-20 px-6 bg-white">
         <div className="max-w-5xl mx-auto text-center mb-12">
           <h2 className="text-3xl font-black text-zinc-900">합리적인 요금제</h2>
-          <p className="mt-3 text-zinc-500">규모에 맞는 플랜을 선택하세요. 언제든 변경 가능합니다.</p>
+          <p className="mt-3 text-zinc-500">규모에 맞는 플랜을 선택하세요.</p>
         </div>
         <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 items-start">
           {PLANS.map((plan) => (
-            <div key={plan.name} className={`relative rounded-2xl border-2 p-7 ${plan.color}`}>
+            <div key={plan.name} className={`relative rounded-2xl border-2 p-7 ${plan.border}`}>
               {plan.badge && (
-                <span className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full ${plan.badgeColor}`}>{plan.badge}</span>
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full bg-blue-500 text-white">{plan.badge}</span>
               )}
               <p className="font-black text-lg text-zinc-900">{plan.name}</p>
               <div className="mt-3 flex items-baseline gap-1">
@@ -293,7 +249,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/members" className={`mt-7 block text-center font-bold py-3 rounded-xl transition-all ${plan.ctaStyle}`}>
+              <Link href="/members" className={`mt-7 block text-center font-bold py-3 rounded-xl transition-all ${plan.ctaClass}`}>
                 {plan.cta}
               </Link>
             </div>
@@ -301,30 +257,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FAQ ──────────────────────────────────────────────────── */}
+      {/* ── FAQ ──────────────────────────────────── */}
       <section id="faq" className="py-20 px-6 bg-zinc-50">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-black text-zinc-900 text-center mb-10">자주 묻는 질문</h2>
-          <div className="space-y-3">
-            {FAQS.map((f, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex justify-between items-center px-6 py-4 text-left font-bold text-zinc-900 hover:bg-zinc-50 transition-colors"
-                >
-                  <span>{f.q}</span>
-                  <span className={`text-blue-500 text-xl transition-transform ${openFaq === i ? "rotate-45" : ""}`}>+</span>
-                </button>
-                {openFaq === i && (
-                  <div className="px-6 pb-5 text-sm text-zinc-600 leading-relaxed border-t border-zinc-50">{f.a}</div>
-                )}
-              </div>
-            ))}
-          </div>
+          <FaqAccordion faqs={FAQS} />
         </div>
       </section>
 
-      {/* ── FINAL CTA ────────────────────────────────────────────── */}
+      {/* ── FINAL CTA ────────────────────────────── */}
       <section className="py-24 px-6 bg-gradient-to-br from-blue-600 to-blue-800 text-center">
         <h2 className="text-4xl font-black text-white leading-tight">
           오늘부터 더 똑똑하게<br />헬스장을 운영하세요
@@ -336,11 +277,11 @@ export default function LandingPage() {
         <p className="mt-4 text-blue-200 text-sm">신용카드 불필요 · 언제든 취소 가능</p>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────── */}
+      {/* ── FOOTER ───────────────────────────────── */}
       <footer className="bg-zinc-950 py-12 px-6 text-center">
         <p className="text-2xl font-black text-white mb-2">💪 FitBoss</p>
         <p className="text-zinc-500 text-sm">헬스장 전용 올인원 경영 관리 플랫폼</p>
-        <div className="mt-6 flex justify-center gap-6 text-sm text-zinc-600">
+        <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-zinc-600">
           <Link href="/members" className="hover:text-zinc-300 transition-colors">회원 관리</Link>
           <Link href="/trainers" className="hover:text-zinc-300 transition-colors">트레이너</Link>
           <Link href="/checkin" className="hover:text-zinc-300 transition-colors">체크인</Link>
