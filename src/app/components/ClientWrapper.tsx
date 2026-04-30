@@ -54,28 +54,31 @@ function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <KakaoAutoSender />
       <Nav />
-      {/* 지점 배너 */}
-      <div className={`px-4 py-1.5 text-xs font-semibold flex items-center justify-between ${
-        isAdmin ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"
-      }`}>
-        <span>
-          {isAdmin
-            ? "🔑 관리자 (전체 지점 접근)"
-            : `📍 ${activeBranch || "미지정 지점"} · ${profile.full_name || profile.email}`}
-        </span>
-        <div className="flex items-center gap-2">
-          <SyncBadge />
-          <button
-            onClick={signOut}
-            className="text-white/70 hover:text-white transition text-xs underline"
-          >
-            로그아웃
-          </button>
+      {/* 사이드바 너비(md:pl-52)만큼 밀어주기 */}
+      <div className="md:pl-52">
+        {/* 지점 배너 */}
+        <div className={`px-4 py-1.5 text-xs font-semibold flex items-center justify-between ${
+          isAdmin ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"
+        }`}>
+          <span>
+            {isAdmin
+              ? "🔑 관리자 (전체 지점 접근)"
+              : `📍 ${activeBranch || "미지정 지점"} · ${profile.full_name || profile.email}`}
+          </span>
+          <div className="flex items-center gap-2">
+            <SyncBadge />
+            <button
+              onClick={signOut}
+              className="text-white/70 hover:text-white transition text-xs underline"
+            >
+              로그아웃
+            </button>
+          </div>
         </div>
-      </div>
-      {/* 모바일 하단 탭바 높이만큼 패딩 (md 이상에서는 불필요) */}
-      <div className="pb-16 md:pb-0">
-        {children}
+        {/* 모바일 하단 탭바 높이만큼 패딩 (md 이상에서는 불필요) */}
+        <div className="pb-16 md:pb-0">
+          {children}
+        </div>
       </div>
 
       {/* 카카오톡 문의 플로팅 버튼 (아이콘 전용) */}
