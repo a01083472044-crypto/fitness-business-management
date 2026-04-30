@@ -5,8 +5,9 @@ export interface UserProfile {
   email: string;
   full_name: string;
   branch: string;   // "" = 전체 접근 (superadmin)
-  role: "superadmin" | "branch";
+  role: "platform_admin" | "superadmin" | "branch" | "pending";
   gym_code: string;
+  created_at?: string;
 }
 
 export async function getSession() {

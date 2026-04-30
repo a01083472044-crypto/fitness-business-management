@@ -144,15 +144,22 @@ function DropGroup({
 
 /* ── 메인 Nav ───────────────────────────────────────────────────── */
 export default function Nav() {
-  const pathname      = usePathname();
-  const { isAdmin }   = useAuth();
-  const { staffTerm } = useStaffTerm();
+  const pathname           = usePathname();
+  const { isAdmin, isPlatformOwner } = useAuth();
+  const { staffTerm }      = useStaffTerm();
   const [menuOpen, setMenuOpen] = useState(false);
 
   /* 페이지 이동 시 메뉴 닫기 */
   useEffect(() => { setMenuOpen(false); }, [pathname]);
 
-  const allMenu = isAdmin ? [...MENU, ADMIN_ITEM] : MENU;
+  const platformItem: MenuItem = {
+    type: "link", href: "/superadmin", icon: "👑", label: "총관리자",
+  };
+  const allMenu = isPlatformOwner
+    ? [...MENU, ADMIN_ITEM, platformItem]
+    : isAdmin
+    ? [...MENU, ADMIN_ITEM]
+    : MENU;
 
   /* 현재 페이지 이름 표시용 */
   const currentLabel = (() => {

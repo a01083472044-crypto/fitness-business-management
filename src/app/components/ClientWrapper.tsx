@@ -9,7 +9,7 @@ import SyncBadge from "./SyncBadge";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname();
-  const { profile, loading, isAdmin, activeBranch, signOut } = useAuth();
+  const { profile, loading, isAdmin, isPlatformOwner, activeBranch, signOut } = useAuth();
   const isPublicPage = pathname === "/login" || pathname === "/signup";
 
   // 로그인/회원가입 페이지는 Nav 없이
@@ -58,10 +58,14 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <div className="pt-14">
         {/* 지점 배너 */}
         <div className={`px-4 py-1.5 text-xs font-semibold flex items-center justify-between ${
-          isAdmin ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"
+          isPlatformOwner ? "bg-purple-700 text-white"
+          : isAdmin       ? "bg-blue-600 text-white"
+          :                  "bg-emerald-600 text-white"
         }`}>
           <span>
-            {isAdmin
+            {isPlatformOwner
+              ? "👑 핏보스 총관리자"
+              : isAdmin
               ? "🔑 관리자 (전체 지점 접근)"
               : `📍 ${activeBranch || "미지정 지점"} · ${profile.full_name || profile.email}`}
           </span>

@@ -7,8 +7,9 @@ import { useRouter, usePathname } from "next/navigation";
 interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
-  activeBranch: string;   // "" or "전체" = 전체 접근
-  isAdmin: boolean;
+  activeBranch: string;
+  isAdmin: boolean;          // 헬스장 관리자 (superadmin)
+  isPlatformOwner: boolean;  // 핏보스 총관리자 (platform_admin)
   signOut: () => void;
 }
 
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   activeBranch: "전체",
   isAdmin: false,
+  isPlatformOwner: false,
   signOut: () => {},
 });
 
@@ -55,11 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace("/login");
   };
 
-  const isAdmin = profile?.role === "superadmin";
+  const isPlatformOwner = profile?.role === "platform_admin";
+  const isAdmin = profile?.role === "superadmin" || isPlatformOwner;
   const activeBranch = isAdmin ? "" : (profile?.branch ?? "");
 
   return (
-    <AuthContext.Provider value={{ profile, loading, activeBranch, isAdmin, signOut: handleSignOut }}>
+    <AuthContext.Provider value={{ profile, loading, activeBranch, isAdmin, isPlatformOwner, signOut: handleSignOut }}>
       {children}
     </AuthContext.Provider>
   );
