@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { BusinessType } from "./store";
 
 export interface UserProfile {
   id: string;
@@ -7,6 +8,7 @@ export interface UserProfile {
   branch: string;   // "" = 전체 접근 (superadmin)
   role: "platform_admin" | "superadmin" | "branch" | "pending";
   gym_code: string;
+  business_type?: BusinessType;
   created_at?: string;
 }
 

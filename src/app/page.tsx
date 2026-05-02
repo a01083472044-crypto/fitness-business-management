@@ -1,6 +1,7 @@
 import Link from "next/link";
 import FaqAccordion from "./components/FaqAccordion";
 import StickyNav from "./components/StickyNav";
+import HeroCTA from "./components/HeroCTA";
 
 /* ── 기능 카드 데이터 ───────────────────────────────────── */
 const FEATURES = [
@@ -33,18 +34,21 @@ const PLANS = [
     border: "border-zinc-200", badge: null,
     features: ["회원 관리 (50명)", "매출 기본 집계", "체크인 관리", "클라우드 자동저장"],
     cta: "무료로 시작", ctaClass: "bg-zinc-900 text-white hover:bg-zinc-700",
+    href: "/signup",
   },
   {
     name: "프로", price: "₩29,000", period: "/월",
     border: "border-blue-500 shadow-xl shadow-blue-100", badge: "가장 인기",
     features: ["회원 무제한", "트레이너·급여 관리", "상담 퍼널 분석", "락커 관리", "세금계산서·정산", "멀티 지점 관리", "우선 고객지원"],
     cta: "14일 무료 체험", ctaClass: "bg-blue-600 text-white hover:bg-blue-500",
+    href: "/signup",
   },
   {
     name: "엔터프라이즈", price: "문의", period: "",
     border: "border-zinc-200", badge: null,
     features: ["프로 전체 포함", "전용 온보딩", "맞춤형 기능 개발", "전담 매니저"],
     cta: "상담 요청", ctaClass: "bg-zinc-900 text-white hover:bg-zinc-700",
+    href: "/signup",
   },
 ];
 
@@ -88,14 +92,7 @@ export default function LandingPage() {
             회원 관리·매출 분석·트레이너 정산·락커·체크인까지<br />
             <strong className="text-white">원장님의 시간을 하루 2시간 돌려드립니다.</strong>
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/members" className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-8 py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/50">
-              무료로 시작하기 → 지금 바로
-            </Link>
-            <a href="#features" className="border border-zinc-600 hover:border-zinc-400 text-zinc-300 hover:text-white font-semibold text-lg px-8 py-4 rounded-2xl transition-all">
-              기능 둘러보기
-            </a>
-          </div>
+          <HeroCTA />
           <p className="mt-5 text-xs text-zinc-500">신용카드 불필요 · 설치 없음 · 즉시 시작</p>
         </div>
 
@@ -249,7 +246,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/members" className={`mt-7 block text-center font-bold py-3 rounded-xl transition-all ${plan.ctaClass}`}>
+              <Link href="/signup" className={`mt-7 block text-center font-bold py-3 rounded-xl transition-all ${plan.ctaClass}`}>
                 {plan.cta}
               </Link>
             </div>
@@ -271,7 +268,7 @@ export default function LandingPage() {
           오늘부터 더 똑똑하게<br />헬스장을 운영하세요
         </h2>
         <p className="mt-4 text-blue-100 text-lg">설치 없이, 지금 바로 시작할 수 있습니다.</p>
-        <Link href="/members" className="inline-block mt-8 bg-white text-blue-700 font-black text-xl px-10 py-4 rounded-2xl hover:scale-105 transition-transform shadow-xl shadow-blue-900/30">
+        <Link href="/signup" className="inline-block mt-8 bg-white text-blue-700 font-black text-xl px-10 py-4 rounded-2xl hover:scale-105 transition-transform shadow-xl shadow-blue-900/30">
           무료로 시작하기 → 지금 바로
         </Link>
         <p className="mt-4 text-blue-200 text-sm">신용카드 불필요 · 언제든 취소 가능</p>
@@ -282,7 +279,7 @@ export default function LandingPage() {
         <p className="text-2xl font-black text-white mb-2">💪 FitBoss</p>
         <p className="text-zinc-500 text-sm">헬스장 전용 올인원 경영 관리 플랫폼</p>
         <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-zinc-600">
-          <Link href="/members" className="hover:text-zinc-300 transition-colors">회원 관리</Link>
+          <Link href="/signup" className="hover:text-zinc-300 transition-colors">회원 관리</Link>
           <Link href="/trainers" className="hover:text-zinc-300 transition-colors">트레이너</Link>
           <Link href="/checkin" className="hover:text-zinc-300 transition-colors">체크인</Link>
           <Link href="/locker" className="hover:text-zinc-300 transition-colors">락커</Link>

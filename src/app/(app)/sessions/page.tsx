@@ -252,6 +252,7 @@ export default function SessionsPage() {
     const pkg: SessionPackage = {
       id: editing?.pkgId ?? crypto.randomUUID(),
       name: pkgName.trim(),
+      programType: existingPkg?.programType ?? "PT",
       trainerName,
       trainerType,
       classType,

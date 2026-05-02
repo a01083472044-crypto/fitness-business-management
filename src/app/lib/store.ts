@@ -47,23 +47,181 @@ export function calcPaymentFee(amount: number, method: PaymentMethod, cardRate?:
   return Math.round(amount * rate / 100);
 }
 
+// ── 사업자 유형 ────────────────────────────────────────────────────────────
+export type BusinessType =
+  | "헬스장" | "PT샵" | "필라테스" | "골프장" | "요가" | "크로스핏" | "기타";
+
+export interface BusinessConfig {
+  label: string;
+  icon: string;
+  color: string;          // tailwind bg color class (button bg)
+  programs: ProgramType[];        // 사용 가능한 횟수제 프로그램
+  memberships: MembershipCategory[]; // 사용 가능한 기간제 회원권 (아래 선언 후 참조)
+  hasLocker: boolean;
+  hasCheckin: boolean;
+  hasGroupSchedule: boolean;
+  hasIndividualSchedule: boolean;
+}
+
+// 사업자 유형별 기능 설정 (MembershipCategory는 아래에 정의되지만 여기서 string literal로 사용)
+export const BUSINESS_CONFIGS: Record<BusinessType, Omit<BusinessConfig, "memberships"> & { memberships: string[] }> = {
+  "헬스장":  {
+    label: "헬스장",  icon: "🏋️", color: "bg-blue-500",
+    programs: ["PT", "GX", "기타"],
+    memberships: ["헬스"],
+    hasLocker: true, hasCheckin: true, hasGroupSchedule: true, hasIndividualSchedule: true,
+  },
+  "PT샵":    {
+    label: "PT샵",    icon: "💪", color: "bg-orange-500",
+    programs: ["PT", "기타"],
+    memberships: [],
+    hasLocker: false, hasCheckin: false, hasGroupSchedule: false, hasIndividualSchedule: true,
+  },
+  "필라테스": {
+    label: "필라테스", icon: "🧘", color: "bg-pink-500",
+    programs: ["필라테스", "기타"],
+    memberships: ["기타기간제"],
+    hasLocker: false, hasCheckin: true, hasGroupSchedule: true, hasIndividualSchedule: true,
+  },
+  "골프장":  {
+    label: "골프장",  icon: "⛳", color: "bg-green-600",
+    programs: ["골프레슨", "기타"],
+    memberships: ["골프", "기타기간제"],
+    hasLocker: true, hasCheckin: false, hasGroupSchedule: false, hasIndividualSchedule: true,
+  },
+  "요가":    {
+    label: "요가",    icon: "🙏", color: "bg-purple-500",
+    programs: ["요가", "기타"],
+    memberships: ["기타기간제"],
+    hasLocker: false, hasCheckin: true, hasGroupSchedule: true, hasIndividualSchedule: true,
+  },
+  "크로스핏": {
+    label: "크로스핏", icon: "🔥", color: "bg-red-500",
+    programs: ["크로스핏", "GX", "기타"],
+    memberships: ["기타기간제"],
+    hasLocker: false, hasCheckin: true, hasGroupSchedule: true, hasIndividualSchedule: true,
+  },
+  "기타":    {
+    label: "기타 업종", icon: "✏️", color: "bg-zinc-500",
+    programs: ["PT", "필라테스", "GX", "골프레슨", "요가", "크로스핏", "기타"],
+    memberships: ["헬스", "골프", "기타기간제"],
+    hasLocker: true, hasCheckin: true, hasGroupSchedule: true, hasIndividualSchedule: true,
+  },
+};
+
+export const BUSINESS_TYPE_LIST: BusinessType[] = ["헬스장", "PT샵", "필라테스", "골프장", "요가", "크로스핏", "기타"];
+
+// ── 횟수제 프로그램 종류 ───────────────────────────────────────────────────
+export type ProgramType = "PT" | "필라테스" | "GX" | "골프레슨" | "요가" | "크로스핏" | "기타";
+
+export const PROGRAM_LIST: { type: ProgramType; icon: string; label: string }[] = [
+  { type: "PT",      icon: "💪", label: "PT" },
+  { type: "필라테스", icon: "🧘", label: "필라테스" },
+  { type: "GX",      icon: "💃", label: "GX" },
+  { type: "골프레슨", icon: "🏌️", label: "골프레슨" },
+  { type: "요가",    icon: "🙏", label: "요가" },
+  { type: "크로스핏", icon: "🔥", label: "크로스핏" },
+  { type: "기타",    icon: "✏️", label: "기타" },
+];
+
 // ── PT 패키지 ──────────────────────────────────────────────────────────────
 export type ClassType = "1:1" | "그룹";
 
 export interface SessionPackage {
   id: string;
-  name: string;              // 수업명 (예: "홍성은 수업")
+  name: string;              // 수업명
+  programType: ProgramType;  // 프로그램 종류: PT / 필라테스 / GX / 기타
   trainerName: string;       // 담당 트레이너
   trainerType: "정규직" | "프리랜서" | "";
   classType: ClassType;      // 수업 유형: 1:1 또는 그룹
-  groupSize: number;         // 그룹 인원 (2~8, 1:1이면 1)
+  groupSize: number;         // 인원 수 (1:1이면 1, 2:1이면 2 등)
   totalSessions: number;     // 결제 회차
   conductedSessions: number; // 진행 회차
-  paymentAmount: number;     // 결제 금액 (원래 결제액)
-  paymentMethod: PaymentMethod; // 결제 수단
+  paymentAmount: number;     // 결제 금액
+  paymentMethod: PaymentMethod;
   paymentFee: number;        // 수수료 금액
-  netAmount: number;         // 실수령액 (paymentAmount - paymentFee)
+  netAmount: number;         // 실수령액
   registeredAt: string;      // YYYY-MM-DD
+}
+
+// ── 일반 회원권 ─────────────────────────────────────────────────────────────
+export type MembershipDuration = "1개월" | "3개월" | "6개월" | "12개월" | "월구독제";
+
+export const MEMBERSHIP_MONTHS: Record<MembershipDuration, number> = {
+  "1개월":   1,
+  "3개월":   3,
+  "6개월":   6,
+  "12개월": 12,
+  "월구독제": 1,
+};
+
+export type MembershipCategory = "헬스" | "골프" | "기타기간제";
+
+export interface GymMembership {
+  id: string;
+  category: MembershipCategory;  // 회원권 종류 (헬스 / 골프 / 기타기간제)
+  membershipType: MembershipDuration;
+  startDate: string;      // YYYY-MM-DD
+  endDate: string;        // YYYY-MM-DD (자동 계산)
+  paymentAmount: number;  // 결제 금액
+  paymentMethod: PaymentMethod;
+  paymentFee: number;     // 수수료
+  netAmount: number;      // 실수령액
+  registeredAt: string;   // YYYY-MM-DD
+  autoRenew: boolean;     // 월구독제 자동 갱신 여부
+}
+
+/** 회원권 종료일 자동 계산 (시작일 + 기간 - 1일) */
+export function calcMembershipEndDate(startDate: string, type: MembershipDuration): string {
+  const d = new Date(startDate + "T00:00:00");
+  d.setMonth(d.getMonth() + MEMBERSHIP_MONTHS[type]);
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** 특정 월의 일반 회원권 소진매출(consumed) + 미소진부채(deferred) 계산 */
+export function calcGymMembershipRevenue(
+  allMembers: Member[],
+  month: string
+): { consumed: number; deferred: number } {
+  const [yr, mo] = month.split("-").map(Number);
+  const monthStart = new Date(yr, mo - 1, 1);
+  const monthEnd   = new Date(yr, mo, 0); // 이달 말일 (23:59:59)
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let consumed = 0;
+  let deferred = 0;
+
+  for (const member of allMembers) {
+    for (const m of (member.gymMemberships ?? [])) {
+      const start     = new Date(m.startDate + "T00:00:00");
+      const end       = new Date(m.endDate   + "T00:00:00");
+      const totalDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+      if (totalDays <= 0 || m.paymentAmount <= 0) continue;
+
+      const dailyRate = m.paymentAmount / totalDays;
+
+      // ── 이달 소진분: [start, end] ∩ [monthStart, monthEnd] ──────────────
+      const ovStart = start > monthStart ? start : monthStart;
+      const ovEnd   = end   < monthEnd   ? end   : monthEnd;
+      if (ovEnd >= ovStart) {
+        const days = Math.round((ovEnd.getTime() - ovStart.getTime()) / 86400000) + 1;
+        consumed += dailyRate * Math.max(0, days);
+      }
+
+      // ── 미소진부채: 오늘까지 소진된 날 제외한 잔여 일수 ──────────────────
+      const consumedDays = Math.min(
+        Math.max(0, Math.round((today.getTime() - start.getTime()) / 86400000) + 1),
+        totalDays
+      );
+      const remainingDays = Math.max(0, totalDays - consumedDays);
+      deferred += dailyRate * remainingDays;
+    }
+  }
+
+  return { consumed, deferred };
 }
 
 // ── 회원 ───────────────────────────────────────────────────────────────────
@@ -76,7 +234,8 @@ export interface Member {
   totalPayment: number;       // packages 합산 (또는 수동 입력)
   totalSessions: number;
   conductedSessions: number;
-  packages: SessionPackage[]; // PT 패키지 목록
+  packages: SessionPackage[];      // PT 패키지 목록
+  gymMemberships: GymMembership[]; // 일반 회원권 목록
 }
 
 // packages가 있으면 합산값을 Member의 집계 필드에 동기화
@@ -236,8 +395,13 @@ export function getMembers(): Member[] {
       ...m,
       packages: (m.packages ?? []).map((p: SessionPackage) => ({
         ...p,
-        classType: p.classType ?? "1:1",
-        groupSize: p.groupSize ?? 1,
+        programType: p.programType ?? "PT",
+        classType:   p.classType   ?? "1:1",
+        groupSize:   p.groupSize   ?? 1,
+      })),
+      gymMemberships: (m.gymMemberships ?? []).map((g: GymMembership) => ({
+        ...g,
+        category: g.category ?? "헬스",
       })),
     }));
   } catch { return []; }
@@ -412,11 +576,15 @@ export function saveCheckIns(list: CheckIn[]) {
   pushToCloud("checkIns", list);
 }
 
-/** 전체 회원 패키지에서 결제 수수료 합산 → 해당 월 비용에 반영 */
+/** 전체 회원 패키지 + 일반 회원권에서 결제 수수료 합산 → 해당 월 비용에 반영 */
 export function syncPaymentFeeToCosts(members: Member[], month: string) {
-  const totalFee = members.flatMap((m) => m.packages ?? [])
+  const ptFee = members.flatMap((m) => m.packages ?? [])
     .filter((p) => p.registeredAt?.slice(0, 7) === month)
     .reduce((s, p) => s + (p.paymentFee ?? 0), 0);
+  const gymFee = members.flatMap((m) => m.gymMemberships ?? [])
+    .filter((g) => g.registeredAt?.slice(0, 7) === month)
+    .reduce((s, g) => s + (g.paymentFee ?? 0), 0);
+  const totalFee = ptFee + gymFee;
 
   const allCosts = getCosts();
   const existing = allCosts.find((c) => c.month === month && (c.branch ?? "") === "") ?? emptyCosts(month, "");

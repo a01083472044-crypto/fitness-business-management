@@ -12,6 +12,7 @@ type MenuItem  = LinkItem | GroupItem;
 
 /* ── 메뉴 구조 ───────────────────────────────────────────────────── */
 const MENU: MenuItem[] = [
+  { type: "link",  href: "/notifications", icon: "🔔", label: "알림 관리" },
   { type: "link",  href: "/members",   icon: "👤", label: "회원관리" },
   {
     type: "group", icon: "📅", label: "스케줄",
@@ -145,21 +146,50 @@ function DropGroup({
 /* ── 메인 Nav ───────────────────────────────────────────────────── */
 export default function Nav() {
   const pathname           = usePathname();
-  const { isAdmin, isPlatformOwner } = useAuth();
+  const { isAdmin, isPlatformOwner, businessConfig } = useAuth();
   const { staffTerm }      = useStaffTerm();
   const [menuOpen, setMenuOpen] = useState(false);
 
   /* 페이지 이동 시 메뉴 닫기 */
   useEffect(() => { setMenuOpen(false); }, [pathname]);
 
+  /* 사업자 유형에 따라 메뉴 필터링 */
+  function filterMenu(menu: MenuItem[]): MenuItem[] {
+    return menu.reduce<MenuItem[]>((acc, item) => {
+      if (item.type === "link") {
+        if (item.href === "/locker"         && !businessConfig.hasLocker)           return acc;
+        if (item.href === "/checkin"        && !businessConfig.hasCheckin)          return acc;
+        if (item.href === "/group-schedule" && !businessConfig.hasGroupSchedule)    return acc;
+        if (item.href === "/schedule"       && !businessConfig.hasIndividualSchedule) return acc;
+        acc.push(item);
+      } else {
+        const filteredItems = item.items.filter((sub) => {
+          if (sub.href === "/locker"         && !businessConfig.hasLocker)           return false;
+          if (sub.href === "/checkin"        && !businessConfig.hasCheckin)          return false;
+          if (sub.href === "/group-schedule" && !businessConfig.hasGroupSchedule)    return false;
+          if (sub.href === "/schedule"       && !businessConfig.hasIndividualSchedule) return false;
+          return true;
+        });
+        if (filteredItems.length > 0) {
+          acc.push({ ...item, items: filteredItems });
+        }
+      }
+      return acc;
+    }, []);
+  }
+
   const platformItem: MenuItem = {
     type: "link", href: "/superadmin", icon: "👑", label: "총관리자",
   };
-  const allMenu = isPlatformOwner
+
+  const baseMenu = isPlatformOwner
     ? [...MENU, ADMIN_ITEM, platformItem]
     : isAdmin
     ? [...MENU, ADMIN_ITEM]
     : MENU;
+
+  // 총관리자/관리자는 모든 메뉴 표시, 일반 사용자는 사업자 유형 필터 적용
+  const allMenu = (isAdmin || isPlatformOwner) ? baseMenu : filterMenu(baseMenu);
 
   /* 현재 페이지 이름 표시용 */
   const currentLabel = (() => {
