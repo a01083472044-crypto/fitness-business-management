@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-/* ── Supabase Admin Client ── */
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 const PLAN_PRICES: Record<string, number> = {
   starter: 29000,
   pro:     59000,
@@ -23,6 +17,12 @@ const PLAN_LABELS: Record<string, string> = {
  * Body: { userId } 또는 빈 값(전체 대상 처리)
  */
 export async function POST(req: NextRequest) {
+  /* ── Supabase Admin Client (함수 내부에서 생성 → 빌드 시 env 미필요) ── */
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
+  );
+
   // 내부 API 인증
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;

@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-/* ── Supabase Admin Client (서비스 롤 키 필요) ── */
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 const PLAN_PRICES: Record<string, number> = {
   starter: 29000,
   pro:     59000,
 };
 
 export async function POST(req: NextRequest) {
+  /* ── Supabase Admin Client (함수 내부에서 생성 → 빌드 시 env 미필요) ── */
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
+  );
+
   try {
     const { authKey, customerKey, plan } = await req.json();
 
