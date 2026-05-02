@@ -9,8 +9,18 @@ import {
 import { useStaffTerm } from "../../context/StaffTermContext";
 
 // ── 상수 ───────────────────────────────────────────────────────────────────
-const MAX_HOUR = 23; // 추가 가능한 최대 시간 (22:00, 23:00)
-const EXTRA_SLOTS_KEY = "gym_schedule_extra_hours";
+const BASE_START = 6;   // 기본 시작: 06:00
+const BASE_END   = 21;  // 기본 종료: 21:00
+const MIN_HOUR   = 4;   // 최대 앞당길 수 있는 시간: 04:00
+const MAX_HOUR   = 24;  // 최대 늘릴 수 있는 시간: 24:00 (자정)
+const EXTRA_LATE_KEY  = "gym_schedule_extra_late";
+const EXTRA_EARLY_KEY = "gym_schedule_extra_early";
+
+// 시간 표시 포맷 (24는 "24:00 자정"으로 표기)
+function fmtHour(h: number) {
+  if (h === 24) return "24:00";
+  return `${String(h).padStart(2, "0")}:00`;
+}
 
 const KO_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -75,16 +85,21 @@ export default function SchedulePage() {
   const [selectedDate,  setSelectedDate]  = useState<string>(toDateStr(today));
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
 
-  // 추가 타임슬롯 (21:00 이후)
-  const [extraHours, setExtraHours] = useState<number>(0);
+  // 추가 타임슬롯: 앞(새벽) / 뒤(야간·자정)
+  const [extraEarly, setExtraEarly] = useState<number>(0); // 06:00 앞으로 몇 시간 (최대 2 → 04:00)
+  const [extraLate,  setExtraLate]  = useState<number>(0); // 21:00 뒤로 몇 시간 (최대 3 → 24:00)
 
-  // 전체 시간 슬롯 = 기본(06~21) + 추가(22~)
-  const TIME_SLOTS = useMemo(
-    () => Array.from({ length: 16 + extraHours }, (_, i) =>
-      `${String(i + 6).padStart(2, "0")}:00`
-    ),
-    [extraHours]
-  );
+  // 전체 시간 슬롯 (시작 ~ 종료 hour 배열)
+  const startHour = BASE_START - extraEarly;
+  const endHour   = BASE_END   + extraLate;
+  const TIME_SLOTS = useMemo(() => {
+    const slots: string[] = [];
+    for (let h = startHour; h <= endHour; h++) {
+      slots.push(fmtHour(h));
+    }
+    return slots;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extraEarly, extraLate]);
 
   // 지점 추가 모달
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -108,8 +123,10 @@ export default function SchedulePage() {
     setMembers(getMembers());
     setTrainers(getTrainers().filter((t) => t.status === "재직"));
     setSavedBranches(getBranches());
-    const saved = parseInt(localStorage.getItem(EXTRA_SLOTS_KEY) ?? "0");
-    if (!isNaN(saved) && saved > 0) setExtraHours(saved);
+    const savedLate  = parseInt(localStorage.getItem(EXTRA_LATE_KEY)  ?? "0");
+    const savedEarly = parseInt(localStorage.getItem(EXTRA_EARLY_KEY) ?? "0");
+    if (!isNaN(savedLate)  && savedLate  > 0) setExtraLate(savedLate);
+    if (!isNaN(savedEarly) && savedEarly > 0) setExtraEarly(savedEarly);
   }, []);
 
   const weekDates = useMemo(() => getWeekDates(weekBase), [weekBase]);
@@ -292,18 +309,28 @@ export default function SchedulePage() {
   };
 
   // ── 추가 타임슬롯 핸들러 ──────────────────────────────────────────────────
-  const handleAddHour = () => {
-    const next = extraHours + 1;
-    const maxExtra = MAX_HOUR - 21; // 최대 2시간 추가 (22:00, 23:00)
-    if (next > maxExtra) return;
-    setExtraHours(next);
-    localStorage.setItem(EXTRA_SLOTS_KEY, String(next));
+  const handleAddLate = () => {
+    const next = extraLate + 1;
+    if (BASE_END + next > MAX_HOUR) return;
+    setExtraLate(next);
+    localStorage.setItem(EXTRA_LATE_KEY, String(next));
+  };
+  const handleRemoveLate = () => {
+    const next = Math.max(0, extraLate - 1);
+    setExtraLate(next);
+    localStorage.setItem(EXTRA_LATE_KEY, String(next));
   };
 
-  const handleRemoveHour = () => {
-    const next = Math.max(0, extraHours - 1);
-    setExtraHours(next);
-    localStorage.setItem(EXTRA_SLOTS_KEY, String(next));
+  const handleAddEarly = () => {
+    const next = extraEarly + 1;
+    if (BASE_START - next < MIN_HOUR) return;
+    setExtraEarly(next);
+    localStorage.setItem(EXTRA_EARLY_KEY, String(next));
+  };
+  const handleRemoveEarly = () => {
+    const next = Math.max(0, extraEarly - 1);
+    setExtraEarly(next);
+    localStorage.setItem(EXTRA_EARLY_KEY, String(next));
   };
 
   // ── 주간 표시 문자열 ──────────────────────────────────────────────────────
@@ -456,6 +483,39 @@ export default function SchedulePage() {
           <div className="overflow-x-auto px-2">
             <div style={{ minWidth: `${60 + activeTrainers.length * 130}px` }}>
 
+              {/* ── 새벽 시간 추가 버튼 (그리드 상단) ── */}
+              <div
+                className="grid border-b-2 border-dashed border-zinc-200 mb-1"
+                style={{ gridTemplateColumns: `60px repeat(${activeTrainers.length}, 1fr)` }}
+              >
+                <div className="flex flex-col items-center justify-center gap-1 py-2">
+                  <span className="text-[10px] text-zinc-300 font-mono">{fmtHour(startHour)}</span>
+                </div>
+                <div
+                  className="flex items-center justify-center gap-2 py-2"
+                  style={{ gridColumn: `2 / span ${activeTrainers.length}` }}
+                >
+                  {extraEarly > 0 && (
+                    <button
+                      onClick={handleRemoveEarly}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-400 hover:border-red-300 hover:text-red-400 hover:bg-red-50 transition"
+                    >
+                      <span className="text-sm leading-none">−</span>
+                      {fmtHour(startHour)} 제거
+                    </button>
+                  )}
+                  {BASE_START - extraEarly > MIN_HOUR && (
+                    <button
+                      onClick={handleAddEarly}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-semibold text-indigo-500 hover:bg-indigo-50 hover:border-indigo-400 transition"
+                    >
+                      <span className="text-sm leading-none">＋</span>
+                      🌙 {fmtHour(startHour - 1)} 추가
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* 헤더: 트레이너명 */}
               <div
                 className="grid sticky top-12 z-10 bg-zinc-50"
@@ -475,17 +535,27 @@ export default function SchedulePage() {
 
               {/* 시간 행 */}
               {TIME_SLOTS.map((time) => {
-                const isExtra = parseInt(time) > 21;
+                const h = parseInt(time);
+                const isEarlyExtra = h < BASE_START;   // 새벽 추가 (04~05시)
+                const isLateExtra  = h > BASE_END;     // 야간 추가 (22~24시)
                 return (
                   <div
                     key={time}
-                    className={`grid border-b ${isExtra ? "border-blue-100 bg-blue-50/30" : "border-zinc-100"}`}
+                    className={`grid border-b ${
+                      isEarlyExtra ? "border-indigo-100 bg-indigo-50/30" :
+                      isLateExtra  ? "border-blue-100 bg-blue-50/30"    :
+                      "border-zinc-100"
+                    }`}
                     style={{ gridTemplateColumns: `60px repeat(${activeTrainers.length}, 1fr)` }}
                   >
                     {/* 시간 레이블 */}
                     <div className="flex items-center justify-center py-3">
-                      <span className={`text-xs font-mono ${isExtra ? "text-blue-400 font-bold" : "text-zinc-400"}`}>
-                        {time}
+                      <span className={`text-xs font-mono ${
+                        isEarlyExtra ? "text-indigo-400 font-bold" :
+                        isLateExtra  ? "text-blue-400 font-bold"   :
+                        "text-zinc-400"
+                      }`}>
+                        {time}{time === "24:00" ? " 🌙" : ""}
                       </span>
                     </div>
 
@@ -538,37 +608,34 @@ export default function SchedulePage() {
                 );
               })}
 
-              {/* 타임슬롯 추가/제거 버튼 */}
+              {/* ── 야간 시간 추가 버튼 (그리드 하단) ── */}
               <div
                 className="grid border-t-2 border-dashed border-zinc-200 mt-1"
                 style={{ gridTemplateColumns: `60px repeat(${activeTrainers.length}, 1fr)` }}
               >
-                <div className="flex flex-col items-center justify-center gap-1 py-3">
-                  {/* 현재 마지막 시간 표시 */}
-                  <span className="text-[10px] text-zinc-300 font-mono">
-                    {TIME_SLOTS[TIME_SLOTS.length - 1]}
-                  </span>
+                <div className="flex flex-col items-center justify-center gap-1 py-2">
+                  <span className="text-[10px] text-zinc-300 font-mono">{fmtHour(endHour)}</span>
                 </div>
                 <div
-                  className="col-span-full flex items-center justify-center gap-2 py-3"
+                  className="flex items-center justify-center gap-2 py-2"
                   style={{ gridColumn: `2 / span ${activeTrainers.length}` }}
                 >
-                  {extraHours > 0 && (
+                  {extraLate > 0 && (
                     <button
-                      onClick={handleRemoveHour}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-400 hover:border-red-300 hover:text-red-400 hover:bg-red-50 transition"
+                      onClick={handleRemoveLate}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-400 hover:border-red-300 hover:text-red-400 hover:bg-red-50 transition"
                     >
-                      <span className="text-base leading-none">−</span>
-                      {String(21 + extraHours).padStart(2, "0")}:00 제거
+                      <span className="text-sm leading-none">−</span>
+                      {fmtHour(endHour)} 제거
                     </button>
                   )}
-                  {extraHours < MAX_HOUR - 21 && (
+                  {BASE_END + extraLate < MAX_HOUR && (
                     <button
-                      onClick={handleAddHour}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 text-xs font-semibold text-blue-500 hover:bg-blue-50 hover:border-blue-400 transition"
+                      onClick={handleAddLate}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-blue-200 text-xs font-semibold text-blue-500 hover:bg-blue-50 hover:border-blue-400 transition"
                     >
-                      <span className="text-base leading-none">＋</span>
-                      {String(22 + extraHours).padStart(2, "0")}:00 추가
+                      <span className="text-sm leading-none">＋</span>
+                      🌙 {fmtHour(endHour + 1)}{endHour + 1 === 24 ? " 자정" : ""} 추가
                     </button>
                   )}
                 </div>
