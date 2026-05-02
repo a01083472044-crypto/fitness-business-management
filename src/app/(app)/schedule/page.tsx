@@ -9,9 +9,8 @@ import {
 import { useStaffTerm } from "../../context/StaffTermContext";
 
 // ── 상수 ───────────────────────────────────────────────────────────────────
-const TIME_SLOTS = Array.from({ length: 16 }, (_, i) =>
-  `${String(i + 6).padStart(2, "0")}:00`
-); // 06:00 ~ 21:00
+const MAX_HOUR = 23; // 추가 가능한 최대 시간 (22:00, 23:00)
+const EXTRA_SLOTS_KEY = "gym_schedule_extra_hours";
 
 const KO_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -76,6 +75,17 @@ export default function SchedulePage() {
   const [selectedDate,  setSelectedDate]  = useState<string>(toDateStr(today));
   const [selectedBranch, setSelectedBranch] = useState<string>("전체");
 
+  // 추가 타임슬롯 (21:00 이후)
+  const [extraHours, setExtraHours] = useState<number>(0);
+
+  // 전체 시간 슬롯 = 기본(06~21) + 추가(22~)
+  const TIME_SLOTS = useMemo(
+    () => Array.from({ length: 16 + extraHours }, (_, i) =>
+      `${String(i + 6).padStart(2, "0")}:00`
+    ),
+    [extraHours]
+  );
+
   // 지점 추가 모달
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [newBranchName,   setNewBranchName]   = useState("");
@@ -98,6 +108,8 @@ export default function SchedulePage() {
     setMembers(getMembers());
     setTrainers(getTrainers().filter((t) => t.status === "재직"));
     setSavedBranches(getBranches());
+    const saved = parseInt(localStorage.getItem(EXTRA_SLOTS_KEY) ?? "0");
+    if (!isNaN(saved) && saved > 0) setExtraHours(saved);
   }, []);
 
   const weekDates = useMemo(() => getWeekDates(weekBase), [weekBase]);
@@ -279,6 +291,21 @@ export default function SchedulePage() {
     setShowForm(false);
   };
 
+  // ── 추가 타임슬롯 핸들러 ──────────────────────────────────────────────────
+  const handleAddHour = () => {
+    const next = extraHours + 1;
+    const maxExtra = MAX_HOUR - 21; // 최대 2시간 추가 (22:00, 23:00)
+    if (next > maxExtra) return;
+    setExtraHours(next);
+    localStorage.setItem(EXTRA_SLOTS_KEY, String(next));
+  };
+
+  const handleRemoveHour = () => {
+    const next = Math.max(0, extraHours - 1);
+    setExtraHours(next);
+    localStorage.setItem(EXTRA_SLOTS_KEY, String(next));
+  };
+
   // ── 주간 표시 문자열 ──────────────────────────────────────────────────────
   const weekLabel = useMemo(() => {
     const s = weekDates[0];
@@ -447,64 +474,106 @@ export default function SchedulePage() {
               </div>
 
               {/* 시간 행 */}
-              {TIME_SLOTS.map((time) => (
-                <div
-                  key={time}
-                  className="grid border-b border-zinc-100"
-                  style={{ gridTemplateColumns: `60px repeat(${activeTrainers.length}, 1fr)` }}
-                >
-                  {/* 시간 레이블 */}
-                  <div className="flex items-center justify-center py-3">
-                    <span className="text-xs text-zinc-400 font-mono">{time}</span>
-                  </div>
+              {TIME_SLOTS.map((time) => {
+                const isExtra = parseInt(time) > 21;
+                return (
+                  <div
+                    key={time}
+                    className={`grid border-b ${isExtra ? "border-blue-100 bg-blue-50/30" : "border-zinc-100"}`}
+                    style={{ gridTemplateColumns: `60px repeat(${activeTrainers.length}, 1fr)` }}
+                  >
+                    {/* 시간 레이블 */}
+                    <div className="flex items-center justify-center py-3">
+                      <span className={`text-xs font-mono ${isExtra ? "text-blue-400 font-bold" : "text-zinc-400"}`}>
+                        {time}
+                      </span>
+                    </div>
 
-                  {/* 트레이너 셀 */}
-                  {activeTrainers.map((t, i) => {
-                    const entry = getEntry(selectedDate, time, t.id);
-                    const color = TRAINER_COLORS[i % TRAINER_COLORS.length];
-                    return (
-                      <div
-                        key={t.id}
-                        className="border-l border-zinc-100 min-h-[52px] p-1 cursor-pointer hover:bg-zinc-50 transition"
-                        onClick={() => {
-                          if (entry) openEdit(entry);
-                          else openAdd(selectedDate, time, t);
-                        }}
-                      >
-                        {entry ? (() => {
-                          const entryPkg = entry.packageId
-                            ? (members.find((m) => m.id === entry.memberId)?.packages ?? [])
-                                .find((p) => p.id === entry.packageId)
-                            : undefined;
-                          const isGroup = entryPkg?.classType === "그룹";
-                          return (
-                            <div className={`rounded-lg border px-2 py-1.5 h-full ${color.cell} ${entry.done ? "opacity-50" : ""}`}>
-                              <p className={`text-xs font-bold truncate ${color.text}`}>
-                                {entry.done && "✓ "}{entry.memberName} 수업
-                              </p>
-                              {isGroup && (
-                                <span className="inline-block text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full leading-none mb-0.5">
-                                  그룹 {entryPkg?.groupSize}:1
-                                </span>
-                              )}
-                              {entryPkg && (
-                                <p className="text-xs opacity-60 truncate">{entryPkg.name}</p>
-                              )}
-                              {entry.note && (
-                                <p className={`text-xs opacity-60 truncate ${color.text}`}>{entry.note}</p>
-                              )}
+                    {/* 트레이너 셀 */}
+                    {activeTrainers.map((t, i) => {
+                      const entry = getEntry(selectedDate, time, t.id);
+                      const color = TRAINER_COLORS[i % TRAINER_COLORS.length];
+                      return (
+                        <div
+                          key={t.id}
+                          className="border-l border-zinc-100 min-h-[52px] p-1 cursor-pointer hover:bg-zinc-50 transition"
+                          onClick={() => {
+                            if (entry) openEdit(entry);
+                            else openAdd(selectedDate, time, t);
+                          }}
+                        >
+                          {entry ? (() => {
+                            const entryPkg = entry.packageId
+                              ? (members.find((m) => m.id === entry.memberId)?.packages ?? [])
+                                  .find((p) => p.id === entry.packageId)
+                              : undefined;
+                            const isGroup = entryPkg?.classType === "그룹";
+                            return (
+                              <div className={`rounded-lg border px-2 py-1.5 h-full ${color.cell} ${entry.done ? "opacity-50" : ""}`}>
+                                <p className={`text-xs font-bold truncate ${color.text}`}>
+                                  {entry.done && "✓ "}{entry.memberName} 수업
+                                </p>
+                                {isGroup && (
+                                  <span className="inline-block text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-full leading-none mb-0.5">
+                                    그룹 {entryPkg?.groupSize}:1
+                                  </span>
+                                )}
+                                {entryPkg && (
+                                  <p className="text-xs opacity-60 truncate">{entryPkg.name}</p>
+                                )}
+                                {entry.note && (
+                                  <p className={`text-xs opacity-60 truncate ${color.text}`}>{entry.note}</p>
+                                )}
+                              </div>
+                            );
+                          })() : (
+                            <div className="flex items-center justify-center h-full">
+                              <span className="text-zinc-200 text-xs">−</span>
                             </div>
-                          );
-                        })() : (
-                          <div className="flex items-center justify-center h-full">
-                            <span className="text-zinc-200 text-xs">−</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+
+              {/* 타임슬롯 추가/제거 버튼 */}
+              <div
+                className="grid border-t-2 border-dashed border-zinc-200 mt-1"
+                style={{ gridTemplateColumns: `60px repeat(${activeTrainers.length}, 1fr)` }}
+              >
+                <div className="flex flex-col items-center justify-center gap-1 py-3">
+                  {/* 현재 마지막 시간 표시 */}
+                  <span className="text-[10px] text-zinc-300 font-mono">
+                    {TIME_SLOTS[TIME_SLOTS.length - 1]}
+                  </span>
                 </div>
-              ))}
+                <div
+                  className="col-span-full flex items-center justify-center gap-2 py-3"
+                  style={{ gridColumn: `2 / span ${activeTrainers.length}` }}
+                >
+                  {extraHours > 0 && (
+                    <button
+                      onClick={handleRemoveHour}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-400 hover:border-red-300 hover:text-red-400 hover:bg-red-50 transition"
+                    >
+                      <span className="text-base leading-none">−</span>
+                      {String(21 + extraHours).padStart(2, "0")}:00 제거
+                    </button>
+                  )}
+                  {extraHours < MAX_HOUR - 21 && (
+                    <button
+                      onClick={handleAddHour}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 text-xs font-semibold text-blue-500 hover:bg-blue-50 hover:border-blue-400 transition"
+                    >
+                      <span className="text-base leading-none">＋</span>
+                      {String(22 + extraHours).padStart(2, "0")}:00 추가
+                    </button>
+                  )}
+                </div>
+              </div>
+
             </div>
           </div>
         )}
