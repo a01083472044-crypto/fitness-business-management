@@ -750,11 +750,18 @@ export default function MembersPage() {
                       {/* 결제 금액 */}
                       <div>
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">₩</span>
-                          <input type="text" inputMode="text" placeholder="결제금액 (예: 30만원)"
-                            value={progPayInput}
-                            onChange={(e) => { setProgPayInput(e.target.value); setProgPayAmt(parseKorean(e.target.value)); }}
-                            className={iCls + " pl-8"} />
+                          <input
+                            type="number" min="0" step="0.1" placeholder="0"
+                            value={progPayAmt > 0 ? progPayAmt / 10000 : ""}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              const won = Math.round(v * 10000);
+                              setProgPayAmt(won);
+                              setProgPayInput(String(won));
+                            }}
+                            className={iCls + " pr-14"}
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-400 pointer-events-none">만원</span>
                         </div>
                         {progPayAmt > 0 && (
                           <div className="mt-2 space-y-0.5 px-1">
