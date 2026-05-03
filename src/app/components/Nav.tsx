@@ -57,11 +57,12 @@ const MENU: MenuItem[] = [
   {
     type: "group", icon: "📈", label: "분석",
     items: [
-      { href: "/bep",      label: "손익분기점"    },
-      { href: "/forecast", label: "📈 매출 예측"  },
-      { href: "/report",   label: "📋 경영 리포트" },
-      { href: "/goal",     label: "🎯 목표 매출"  },
-      { href: "/churn",    label: "⚠️ 이탈 감지"  },
+      { href: "/bep",      label: "손익분기점"       },
+      { href: "/forecast", label: "📈 매출 예측"     },
+      { href: "/report",   label: "📋 경영 리포트"    },
+      { href: "/goal",     label: "🎯 목표 매출"     },
+      { href: "/churn",    label: "⚠️ 이탈 감지"     },
+      { href: "/analysis", label: "📍 상권 분석"     },
     ],
   },
   {
