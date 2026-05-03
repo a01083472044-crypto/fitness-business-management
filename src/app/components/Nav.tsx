@@ -207,7 +207,7 @@ export default function Nav() {
   return (
     <>
       {/* ══ 상단 헤더 바 ════════════════════════════════════════════ */}
-      <header className="fixed top-0 inset-x-0 z-50 h-14 bg-white border-b border-zinc-100 flex items-center gap-3 px-4 shadow-sm">
+      <header data-nav className="fixed top-0 inset-x-0 z-50 h-14 bg-white border-b border-zinc-100 flex items-center gap-3 px-4 shadow-sm">
         {/* 햄버거 버튼 */}
         <button
           onClick={() => setMenuOpen((v) => !v)}

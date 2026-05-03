@@ -85,11 +85,12 @@ export default function AnalysisPage() {
       {/* 인쇄 스타일 */}
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          #print-area { display: block !important; }
           .no-print { display: none !important; }
+          header, nav, [data-nav] { display: none !important; }
+          body { background: white !important; margin: 0 !important; }
+          #print-area { background: white !important; }
+          .print-break { page-break-before: always; }
         }
-        @media screen { #print-area { display: block; } }
       `}</style>
 
       <div className="min-h-screen bg-zinc-50" id="print-area">
