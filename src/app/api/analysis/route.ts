@@ -101,72 +101,94 @@ function computeInsights(score: number) {
 
 /* ── 메인 핸들러 ──────────────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
-  if (!KAKAO_KEY) {
-    return NextResponse.json(
-      { error: "KAKAO_REST_API_KEY가 .env.local에 설정되지 않았습니다." },
-      { status: 500 }
-    );
-  }
-
-  const { address, radius = 500 }: { address: string; radius: number } = await req.json();
-  if (!address?.trim()) {
-    return NextResponse.json({ error: "주소를 입력해주세요." }, { status: 400 });
-  }
-
-  /* 1. 좌표 변환 */
-  const coords = await geocode(address);
-  if (!coords) {
-    return NextResponse.json({ error: "주소를 찾을 수 없습니다. 더 자세히 입력해주세요." }, { status: 400 });
-  }
-
-  /* 2. 피트니스 업종 병렬 검색 */
-  const queries = ["헬스장", "PT센터", "필라테스", "요가", "크로스핏", "스포츠센터", "체육관"];
-  const results = await Promise.all(queries.map((q) => searchNear(coords.lat, coords.lng, radius, q)));
-
-  /* 3. 중복 제거 (kakao place id 기준) */
-  const seen = new Set<string>();
-  const unique: KakaoPlace[] = [];
-  results.flat().forEach((p) => {
-    if (!seen.has(p.id)) {
-      seen.add(p.id);
-      unique.push(p);
+  try {
+    if (!KAKAO_KEY) {
+      return NextResponse.json(
+        { error: "KAKAO_REST_API_KEY가 설정되지 않았습니다. Vercel 환경변수를 확인해주세요." },
+        { status: 500 }
+      );
     }
-  });
 
-  /* 4. 분류별 카운트 (카테고리명 포함 여부로 판단) */
-  const count = (keyword: string) =>
-    unique.filter((p) =>
-      p.place_name.includes(keyword) || p.category_name.includes(keyword)
-    ).length;
+    let body: { address?: string; radius?: number };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+    }
 
-  const competitors = {
-    total: unique.length,
-    gyms:     count("헬스"),
-    ptCenters:count("PT"),
-    pilates:  count("필라테스"),
-    yoga:     count("요가"),
-    crossfit: count("크로스핏"),
-    places: unique
-      .map((p) => ({
-        id:       p.id,
-        name:     p.place_name,
-        category: p.category_name,
-        distance: parseInt(p.distance || "0"),
-        address:  p.road_address_name || p.address_name,
-      }))
-      .sort((a, b) => a.distance - b.distance),
-  };
+    const { address, radius = 500 } = body;
+    if (!address?.trim()) {
+      return NextResponse.json({ error: "주소를 입력해주세요." }, { status: 400 });
+    }
 
-  /* 5. 경쟁 강도 */
-  const score = unique.length <= 2 ? 1 : unique.length <= 5 ? 2 : unique.length <= 9 ? 3 : 4;
+    /* 1. 좌표 변환 */
+    let coords: { lat: number; lng: number } | null = null;
+    try {
+      coords = await geocode(address);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return NextResponse.json(
+        { error: `카카오 API 오류: ${msg}. REST API 키를 확인해주세요.` },
+        { status: 502 }
+      );
+    }
 
-  return NextResponse.json({
-    address,
-    coords,
-    radius,
-    competitors,
-    competition: { score, label: intensityLabel(unique.length) },
-    insights: computeInsights(score),
-    analyzedAt: new Date().toISOString(),
-  });
+    if (!coords) {
+      return NextResponse.json({ error: "주소를 찾을 수 없습니다. 더 자세히 입력해주세요." }, { status: 400 });
+    }
+
+    /* 2. 피트니스 업종 병렬 검색 */
+    const queries = ["헬스장", "PT센터", "필라테스", "요가", "크로스핏", "스포츠센터", "체육관"];
+    const results = await Promise.all(queries.map((q) => searchNear(coords!.lat, coords!.lng, radius, q)));
+
+    /* 3. 중복 제거 (kakao place id 기준) */
+    const seen = new Set<string>();
+    const unique: KakaoPlace[] = [];
+    results.flat().forEach((p) => {
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        unique.push(p);
+      }
+    });
+
+    /* 4. 분류별 카운트 (카테고리명 포함 여부로 판단) */
+    const count = (keyword: string) =>
+      unique.filter((p) =>
+        p.place_name.includes(keyword) || p.category_name.includes(keyword)
+      ).length;
+
+    const competitors = {
+      total: unique.length,
+      gyms:     count("헬스"),
+      ptCenters:count("PT"),
+      pilates:  count("필라테스"),
+      yoga:     count("요가"),
+      crossfit: count("크로스핏"),
+      places: unique
+        .map((p) => ({
+          id:       p.id,
+          name:     p.place_name,
+          category: p.category_name,
+          distance: parseInt(p.distance || "0"),
+          address:  p.road_address_name || p.address_name,
+        }))
+        .sort((a, b) => a.distance - b.distance),
+    };
+
+    /* 5. 경쟁 강도 */
+    const score = unique.length <= 2 ? 1 : unique.length <= 5 ? 2 : unique.length <= 9 ? 3 : 4;
+
+    return NextResponse.json({
+      address,
+      coords,
+      radius,
+      competitors,
+      competition: { score, label: intensityLabel(unique.length) },
+      insights: computeInsights(score),
+      analyzedAt: new Date().toISOString(),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "알 수 없는 오류";
+    return NextResponse.json({ error: `서버 오류: ${msg}` }, { status: 500 });
+  }
 }
